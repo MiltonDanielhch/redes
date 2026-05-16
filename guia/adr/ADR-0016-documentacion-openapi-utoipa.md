@@ -1,11 +1,11 @@
-# ADR 0021 — OpenAPI: Utoipa + Scalar + IA-Ready
+# ADR 0016 — OpenAPI: Utoipa + Scalar + IA-Ready
 
 | Campo               | Valor                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                               |
 | **Fecha**           | 2026                                                                                                                     |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                         |
-| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0027 (Contratos API), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
 

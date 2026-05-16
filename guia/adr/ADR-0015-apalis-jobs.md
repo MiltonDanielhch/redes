@@ -1,11 +1,11 @@
-# ADR 0018 — Jobs Asíncronos con Apalis
+# ADR 0015 — Jobs Asíncronos con Apalis
 
 | Campo               | Valor                                                                 |
 | ------------------- | --------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                           |
 | **Fecha**           | 2026                                                                  |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                     |
-| **Relacionado con** | ADR 0015 (Monitoreo), ADR 0016 (Mailer), ADR 0003 (Stack Backend), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0014 (Monitoreo), ADR 0003 (Stack Backend), ADR 0020 (Monitoreo Regional) |
 
 ---
 
@@ -55,7 +55,7 @@ Procesamiento
 | CleanupJob        | Baja      | 1     | Mantenimiento y limpieza       |
 | SyncJob           | Media     | 2     | Sincronización de datos        |
 
-## Jobs de Monitoreo (ADR 0035)
+## Jobs de Monitoreo (ADR 0020)
 
 | Job                    | Prioridad | Retry | Descripción                              |
 | ---------------------- | --------- | ----- | ---------------------------------------- |
@@ -80,7 +80,7 @@ pub fn register_jobs(registry: &mut JobRegistry) {
     registry.register::<AlertJob>("alert");
     registry.register::<CleanupJob>("cleanup");
     
-    // Jobs de Monitoreo (ADR 0035)
+    // Jobs de Monitoreo (ADR 0020)
     registry.register::<MetricsAggregationJob>("metrics_aggregation");
     registry.register::<AlertDispatchJob>("alert_dispatch");
     registry.register::<IntrusionDetectionJob>("intrusion_detection");
@@ -93,11 +93,11 @@ pub fn register_jobs(registry: &mut JobRegistry) {
 
 # Monitoreo
 
-Relacionado con ADR 0015 y ADR 0035.
+Relacionado con ADR 0014 y ADR 0020.
 
 Cada worker debe enviar heartbeat a Healthchecks.io.
 
-Los jobs de monitoreo (MetricsAggregationJob, IntrusionDetectionJob, AlertDispatchJob) son esenciales para el módulo de Monitoreo de Infraestructura Regional definido en ADR 0035.
+Los jobs de monitoreo (MetricsAggregationJob, IntrusionDetectionJob, AlertDispatchJob) son esenciales para el módulo de Monitoreo de Infraestructura Regional definido en ADR 0020.
 
 ---
 
@@ -122,6 +122,5 @@ Los jobs de monitoreo (MetricsAggregationJob, IntrusionDetectionJob, AlertDispat
 
 # Decisiones derivadas
 
-* Todos los emails van por jobs (ADR 0016)
 * El worker de Apalis tiene monitoreo obligatorio
 * Jobs críticos tienen retry > 3

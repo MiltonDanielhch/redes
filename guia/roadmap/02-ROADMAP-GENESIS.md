@@ -3,8 +3,8 @@
 > **Objetivo:** directorio vacío → monorepo funcional con crates declarados,
 > herramientas instaladas y `cargo check --workspace` pasando limpio.
 >
-> **Referencia Principal:** ADR 0035 (Módulo de Monitoreo de Infraestructura Regional)
-> **Referencias:** ADR 0001, ADR 0002, ADR 0003, ADR 0012, ADR 0022, ADR 0024, ADR 0027
+> **Referencia Principal:** ADR 0020 (Módulo de Monitoreo de Infraestructura Regional)
+> **Referencias:** ADR 0001, ADR 0002, ADR 0003, ADR 0012, ADR 0017, ADR 0015, ADR 0016
 > **Estimado:** 1-2 días de trabajo
 
 ---
@@ -38,7 +38,7 @@ Leyenda de Fases:
 
 ## G.1 — Estructura física del workspace
 
-> **Referencia:** ADR 0035 (Monitoreo Regional), ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0022 (SvelteKit)
+> **Referencia:** ADR 0020 (Monitoreo Regional), ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0017 (SvelteKit)
 
 El proyecto es un **Monitoreo de Infraestructura Regional** para la Gobernación del Beni:
 
@@ -49,7 +49,7 @@ El proyecto es un **Monitoreo de Infraestructura Regional** para la Gobernación
 * analizar consumo de ancho de banda
 * generar auditorías y reportes técnicos
 
-Debe operar con **Local-First** (ADR 0024) tolerando:
+Debe operar con **Local-First** tolerando:
 * latencia alta
 * cortes de internet
 * sincronización diferida
@@ -80,44 +80,44 @@ Crear carpetas de crates:
     [ ] crates/domain/        ← Ref: ADR 0001
     [ ] crates/application/   ← Ref: ADR 0001
     [ ] crates/infrastructure/← Ref: ADR 0003 (Axum)
-    [ ] crates/database/      ← Ref: ADR 0004 (SQLite), ADR 0035
+    [ ] crates/database/      ← Ref: ADR 0004 (PostgreSQL), ADR 0020
     [ ] crates/auth/          ← Ref: ADR 0008 (PASETO)
     [ ] crates/mailer/        ← Ref: ADR 0016 (Resend)
     [ ] crates/storage/       ← Ref: ADR 0020 (Tigris)
-    [ ] crates/monitoring/    ← Ref: ADR 0015 (Healthchecks), ADR 0035
-    [ ] crates/jobs/          ← Ref: ADR 0018 (Apalis), ADR 0035
-    [ ] crates/sync/          ← Ref: ADR 0024 (Local-First), ADR 0035
-    [ ] crates/snmp/          ← Ref: ADR 0035 (Monitoreo red)
-    [ ] crates/topology/      ← Ref: ADR 0035 (Topología red)
-    [ ] crates/events/        🟡 Fase 2 — Ref: ADR 0027 (ConnectRPC)
+    [ ] crates/monitoring/    ← Ref: ADR 0015 (Healthchecks), ADR 0020
+    [ ] crates/jobs/          ← Ref: ADR 0015 (Apalis), ADR 0020
+    [ ] crates/sync/          ← Ref: ADR 0020
+    [ ] crates/snmp/          ← Ref: ADR 0020 (Monitoreo red)
+    [ ] crates/topology/      ← Ref: ADR 0020 (Topología red)
+    [ ] crates/events/        🟡 Fase 2 — Ref: ADR 0015 (Jobs)
 
 Crear carpetas de apps:
     [ ] apps/api/             ← Ref: ADR 0003 (Axum)
-    [ ] apps/web/             ← Ref: ADR 0022 (SvelteKit + Svelte 5)
+    [ ] apps/web/             ← Ref: ADR 0017 (SvelteKit + Svelte 5)
     [ ] apps/mailer/          ← Ref: ADR 0016 (Resend)
-    [ ] apps/agent/           ← Ref: ADR 0035 (Agente de monitoreo)
-    [ ] apps/cli/             🟡 Fase 2 — Ref: ADR 0028
+    [ ] apps/agent/           ← Ref: ADR 0020 (Agente de monitoreo)
+    [ ] apps/cli/             🟡 Fase 2 — Ref: ADR 0018
 
 Crear carpetas de infraestructura:
     [ ] infra/docker/         ← Ref: ADR 0013, ADR 0014
     [ ] infra/caddy/          ← Ref: ADR 0014
-    [ ] infra/litestream/     ← Ref: ADR 0004 (Backups)
+    [ ] infra/coolify/       ← Ref: ADR 0019 (Coolify)
     [ ] infra/kamal/          ← Ref: ADR 0014
-    [ ] infra/scripts/        ← Ref: ADR 0035 (scripts monitoreo)
+    [ ] infra/scripts/        ← Ref: ADR 0020 (scripts monitoreo)
 
 Crear carpetas de datos:
     [ ] data/migrations/      ← Ref: ADR 0005
     [ ] data/seeds/           ← Ref: ADR 0005
-    [ ] data/assets/         ← Ref: ADR 0035 (snmp mibs)
+    [ ] data/assets/         ← Ref: ADR 0020 (snmp mibs)
 
 pnpm-workspace.yaml  (packages: apps/web, apps/mailer)
-    └─ Ref: ADR 0022
+    └─ Ref: ADR 0017
 
 README.md en la raíz
     └─ Copiar resumen de arquitectura
 
 proto/buf.yaml + proto/buf.gen.yaml + proto/v1/
-    🟡 Fase 2 — Ref: ADR 0027 (ConnectRPC)
+    🟡 Fase 2 — Ref: ADR 0015 (Jobs)
 ```
 
 **Verificación G.1:** `ls -la` muestra la estructura completa.
@@ -126,7 +126,7 @@ proto/buf.yaml + proto/buf.gen.yaml + proto/v1/
 
 ## G.2 — Cargo.toml por crate
 
-> **Referencia:** ADR 0001, ADR 0002, ADR 0003, ADR 0035
+> **Referencia:** ADR 0001, ADR 0002, ADR 0003, ADR 0020
 
 Cada crate declara SOLO sus dependencias directas. El compilador hace cumplir las fronteras.
 
@@ -154,7 +154,7 @@ crates/application/Cargo.toml
     [ ] domain = { path = "../domain" }
 
 crates/database/Cargo.toml
-    └─ Ref: ADR 0004, ADR 0035 (métricas)
+    └─ Ref: ADR 0004, ADR 0020 (métricas)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] sqlx, moka
@@ -179,31 +179,31 @@ crates/storage/Cargo.toml
     [ ] aws-config, aws-sdk-s3
 
 crates/monitoring/Cargo.toml
-    └─ Ref: ADR 0015 (Healthchecks), ADR 0035
+    └─ Ref: ADR 0015 (Healthchecks), ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] reqwest, tracing
 
 crates/jobs/Cargo.toml
-    └─ Ref: ADR 0018 (Apalis), ADR 0035
+    └─ Ref: ADR 0015 (Apalis), ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] apalis, async-trait
 
 crates/sync/Cargo.toml
-    └─ Ref: ADR 0024 (Local-First), ADR 0035
+    └─ Ref: ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] tokio, serde
 
 crates/snmp/Cargo.toml
-    └─ Ref: ADR 0035 (Monitoreo red)
+    └─ Ref: ADR 0020 (Monitoreo red)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] snmp, tokio
 
 crates/topology/Cargo.toml
-    └─ Ref: ADR 0035 (Topología)
+    └─ Ref: ADR 0020 (Topología)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
 
@@ -215,13 +215,13 @@ crates/infrastructure/Cargo.toml
     [ ] axum, utoipa, tower, tower-http
 
 apps/api/Cargo.toml
-    └─ Ref: ADR 0003, ADR 0035
+    └─ Ref: ADR 0003, ADR 0020
     [ ] edition = "2024"
     [ ] infrastructure, database, auth, mailer, storage
     [ ] domain, application
 
 apps/agent/Cargo.toml
-    └─ Ref: ADR 0035 (Agente de monitoreo)
+    └─ Ref: ADR 0020 (Agente de monitoreo)
     [ ] edition = "2024"
     [ ] snmp, sync, monitoring, tokio, reqwest
 
@@ -268,7 +268,7 @@ apps/cli/Cargo.toml
                    ┌──────────────────────────────────────┐
                    │  apps/api                              │
                    │  (ensambla todo)                       │
-                   │  └─ Ref: ADR 0003, ADR 0035          │
+                   │  └─ Ref: ADR 0003, ADR 0020          │
                    └──────────────────────────────────────┘
 ```
 
@@ -337,7 +337,7 @@ deny.toml:
     [ ] RESEND_API_KEY, MAIL_FROM
     [ ] AWS_ENDPOINT_URL_S3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     [ ] STORAGE_BUCKET
-    [ ] LITESTREAM_BUCKET
+    [ ] DATABASE_URL (PostgreSQL)
     [ ] HC_* (Healthchecks.io)
     [ ] SENTRY_DSN (opcional)
 ```
@@ -362,13 +362,13 @@ deny.toml:
 
 ---
 
-## Arquitectura del Proyecto (ADR 0035)
+## Arquitectura del Proyecto (ADR 0020)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │           Monitoreo de Infraestructura Regional             │
 │                    Gobernación del Beni                     │
-│                        ADR 0035                             │
+│                        ADR 0020                             │
 └─────────────────────────────────────────────────────────────┘
 
 Sedes Regionales (múltiples)
@@ -379,12 +379,12 @@ API Axum (apps/api) ← Ref: ADR 0003
     ↓
 Jobs de procesamiento (crates/jobs - Apalis) ← Ref: ADR 0018
     ↓
-SQLite + métricas históricas (crates/database) ← Ref: ADR 0004
+PostgreSQL + métricas históricas (crates/database) ← Ref: ADR 0004
     ↓
-Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0022
+Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 ```
 
-### Componentes del Módulo (ADR 0035)
+### Componentes del Módulo (ADR 0020)
 
 | Componente  | Responsabilidad                   | Crate/App |
 | ----------- | --------------------------------- | --------- |
@@ -396,7 +396,7 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0022
 | `agents`    | Recolección distribuida           | apps/agent |
 | `sync`      | Sincronización offline            | crates/sync |
 
-### Funcionalidades Principales (ADR 0035)
+### Funcionalidades Principales (ADR 0020)
 
 1. **Inventario físico de dispositivos** - switches, APs, routers, firewalls, servidores, enlaces WAN, UPS, cámaras IP
 2. **Topología de red** - mapa por sede, dependencias jerárquicas, estados visuales
@@ -411,17 +411,15 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0022
 | Componente | Tecnología | ADR |
 |------------|------------|-----|
 | Backend | Rust + Axum | ADR 0003 |
-| Frontend | SvelteKit + Svelte 5 | ADR 0022 |
-| DB | SQLite + Litestream | ADR 0004 |
-| Auth | PASETO | ADR 0008 |
-| Jobs | Apalis | ADR 0018 |
-| Mail | Resend + React Email | ADR 0016 |
-| Storage | Tigris (S3) | ADR 0020 |
-| Monitoreo | Healthchecks.io | ADR 0015 |
-| Realtime | SSE | ADR 0022 |
-| Offline | Local-First | ADR 0024 |
-| API Docs | OpenAPI + Utoipa | ADR 0021 |
-| gRPC | ConnectRPC | ADR 0027 |
+| Frontend | SvelteKit + Svelte 5 | ADR 0017 |
+| DB | PostgreSQL | ADR 0004 |
+| Deploy | Coolify | ADR 0019 |
+| Jobs | Apalis | ADR 0015 |
+| Mail | Resend + React Email | ADR (futuro) |
+| Monitoreo | Healthchecks.io | ADR 0014 |
+| Realtime | SSE | ADR 0017 |
+| API Docs | OpenAPI + Utoipa | ADR 0016 |
+| gRPC | ConnectRPC | ADR 0015 |
 
 ---
 
@@ -429,11 +427,11 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0022
 
 | ADR | Tema |
 |-----|------|
-| ADR 0035 | Módulo de Monitoreo de Infraestructura Regional |
+| ADR 0020 | Módulo de Monitoreo de Infraestructura Regional |
 | ADR 0001 | Arquitectura Hexagonal |
 | ADR 0002 | Configuración Tipeada |
 | ADR 0003 | Stack Backend (Rust + Axum) |
-| ADR 0004 | Persistencia SQLite |
+| ADR 0004 | Persistencia PostgreSQL |
 | ADR 0005 | Migraciones y Seeding |
 | ADR 0006 | RBAC, Sessions, Audit |
 | ADR 0007 | Manejo de Errores |
@@ -448,16 +446,13 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0022
 | ADR 0016 | Mailer Resend |
 | ADR 0017 | (placeholder) |
 | ADR 0018 | Jobs Asíncronos Apalis |
-| ADR 0020 | Storage Tigris |
-| ADR 0021 | Documentación OpenAPI |
-| ADR 0022 | Frontend SvelteKit + Svelte 5 |
-| ADR 0023 | i18n Adaptación Regional |
-| ADR 0024 | Filosofía Local-First |
-| ADR 0027 | ConnectRPC + Protobuf |
-| ADR 0028 | Sintonía CLI |
-| ADR 0029 | Landing Page Leads |
-| ADR 0032 | Coolify Deploy |
-| ADR 0035 | Monitoreo Infra Regional |
+| ADR 0019 | Coolify Deploy |
+| ADR 0016 | Documentación OpenAPI |
+| ADR 0017 | Frontend SvelteKit + Svelte 5 |
+| ADR 0018 | Sintonía CLI |
+| ADR 0019 | Coolify Deploy |
+| ADR 0019 | Coolify Deploy |
+| ADR 0020 | Monitoreo de Infraestructura Regional |
 
 ---
 
@@ -488,4 +483,4 @@ just --list               # muestra todos los comandos
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 que define el proyecto completo de Monitoreo de Infraestructura Regional para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 que define el proyecto completo de Monitoreo de Infraestructura Regional para la Gobernación del Beni.

@@ -1,11 +1,11 @@
-# ADR 0015 — Monitoreo: Healthchecks.io + Patrón Dead Man's Switch
+# ADR 0014 — Monitoreo: Healthchecks.io + Patrón Dead Man's Switch
 
 | Campo               | Valor                                                                       |
 | ------------------- | --------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                  |
 | **Fecha**           | 2026                                                                        |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                            |
-| **Relacionado con** | ADR 0004 (Litestream backups), ADR 0018 (Apalis jobs), ADR 0014 (Caddy TLS), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0004 (Litestream backups), ADR 0015 (Apalis jobs), ADR 0013 (Caddy TLS), ADR 0020 (Monitoreo Regional) |
 
 ---
 
@@ -79,7 +79,7 @@ litestream snapshots s3://bucket/boilerplate/db \
 
 # 3 — Heartbeat del worker Apalis
 
-Relacionado con ADR 0018.
+Relacionado con ADR 0015.
 
 ```rust
 // apps/api/src/jobs/worker.rs
@@ -105,7 +105,7 @@ async fn worker_heartbeat(hc_url: &str) {
 
 # 4 — Verificación de TLS
 
-Relacionado con ADR 0014.
+Relacionado con ADR 0013.
 
 ```bash
 # Verifica que el certificado no expire en menos de 30 días

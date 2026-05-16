@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                  |
 | **Fecha**           | 2026                                                                                        |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                            |
-| **Relacionado con** | ADR 0003 (Axum middleware), ADR 0016 (Tracing / request_id), ADR 0004 (PostgreSQL + Docker) |
+| **Relacionado con** | ADR 0003 (Axum middleware), ADR 0015 (Monitoreo), ADR 0004 (PostgreSQL + Docker) |
 
 ---
 

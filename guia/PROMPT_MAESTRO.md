@@ -9,10 +9,10 @@
 | **Prompt Maestro** | `guia/PROMPT_MAESTRO.md` | Este archivo — contexto global del proyecto |
 | **Roadmap Master** | `guia/roadmap/01-ROADMAP-MASTER.md` | Índice de todas las fases y orden de ejecución |
 | **Roadmap Actual** | `guia/roadmap/02-ROADMAP-GENESIS.md` | ← **FASE ACTIVA** — Génesis del proyecto |
-| **ADR Principal** | `guia/adr/ADR-0035-monitoreo-infraestructura-regional.md` | Definición del proyecto |
-| **Stack Tecnológico** | `guia/adr/ADR-0035-monitoreo-infraestructura-regional.md` | Stack definido en ADR 0035 |
+| **ADR Principal** | `guia/adr/ADR-0020-monitoreo-infraestructura-regional.md` | Definición del proyecto |
+| **Stack Tecnológico** | `guia/adr/ADR-0020-monitoreo-infraestructura-regional.md` | Stack definido en ADR 0020 |
 | **Arquitectura** | `guia/adr/ADR-0001-arquitectura-hexagonal-corregido.md` | Hexagonal Architecture |
-| **ADRs** | `guia/adr/` | 35 decisiones arquitectónicas activas |
+| **ADRs** | `guia/adr/` | 20 decisiones arquitectónicas activas |
 
 ---
 
@@ -42,7 +42,7 @@
 
 ## Proyecto: Monitoreo de Infraestructura Regional
 
-### Contexto (ADR 0035)
+### Contexto (ADR 0020)
 
 La Gobernación del Beni requiere una plataforma centralizada para:
 
@@ -63,17 +63,17 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 
 - **Arquitectura hexagonal en Rust** (Edition 2024)
 - **Workspace monorepo** con Cargo — crates independientes
-- **Backend**: Axum 0.8 + SQLx + SQLite WAL + PASETO v4 (nunca JWT)
+- **Backend**: Axum 0.8 + SQLx + PostgreSQL + PASETO v4 (nunca JWT)
 - **Monitoreo**: Inventario de dispositivos, métricas, topología, alertas, detección de intrusos
 - **RBAC completo**: roles, permisos, sesiones y auditoría
 - **Auth**: argon2id + PASETO v4 Local + Soft Delete
 - **Jobs async**: Apalis + métricas + alertas
 - **Cache**: in-process con Moka
-- **Local-First**: SQLite Wasm + sync queue para operación offline (ADR 0024, ADR 0035)
+- **Local-First**: SQLite Wasm + sync queue para operación offline (ADR 0020)
 - **Observabilidad**: tracing + Sentry + Healthchecks.io
 - **Frontend**: SvelteKit + Svelte 5 + TanStack Query + LayerChart
-- **SSE**: preferido sobre WebSocket para realtime (ADR 0035)
-- **Agentes**: ligera en sedes remotas (ADR 0035)
+- **SSE**: preferido sobre WebSocket para realtime (ADR 0020)
+- **Agentes**: ligera en sedes remotas (ADR 0020)
 
 ## Tu Misión
 
@@ -87,17 +87,17 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 ## Stack Tecnológico
 
 ### Backend
-- Rust 2024 · Axum 0.8 · SQLx · SQLite WAL · Litestream
+- Rust 2024 · Axum 0.8 · SQLx · PostgreSQL
 - argon2id · PASETO v4 (pasetors) · Moka · Apalis · tracing
 - Sentry · Utoipa + Scalar · Resend
 - snmp crate · surge-ping
 
 ### Frontend
 - SvelteKit SSR · Svelte 5 Runes · TypeScript · Tailwind v4
-- shadcn-svelte · TanStack Query · ArkType · Paraglide JS
+- shadcn-svelte · TanStack Query · ArkType
 - LayerChart · SSE client
 
-### Componentes del Módulo de Monitoreo (ADR 0035)
+### Componentes del Módulo de Monitoreo (ADR 0020)
 
 | Componente  | Descripción |
 | ----------- | --------------------------------- |
@@ -109,7 +109,7 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 | `agents`    | Recolección distribuida en sedes |
 | `sync`      | Sincronización offline            |
 
-### Entidades de Dominio (ADR 0035)
+### Entidades de Dominio (ADR 0020)
 
 - **Sede**: nombre, ubicación, secretaría
 - **Device**: hostname, IP, MAC, tipo (switch, AP, router, firewall, server, UPS, cámara), estado (active, offline, maintenance)
@@ -121,43 +121,33 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 
 ## Estructura de Crates
 
+> Ver `02-ROADMAP-GENESIS.md` para la estructura completa de crates y carpetas.
 > El `Cargo.toml` de cada crate hace cumplir las fronteras arquitectónicas.
 
-| Crate | Responsabilidad | Dependencias |
-|-------|----------------|--------------|
-| `crates/domain/` | Core de negocio + entidades de monitoreo | thiserror, uuid, time, serde — **NADA MÁS** |
-| `crates/application/` | Casos de uso + use cases de monitoreo | solo domain |
-| `crates/infrastructure/` | Adaptadores externos + Axum | application + axum + config + utoipa |
-| `crates/database/` | Repositorios SQL | domain + sqlx + moka |
-| `crates/auth/` | Autenticación PASETO | domain + argon2 + pasetors |
-| `crates/mailer/` | Emails | domain + resend-rs |
-| `crates/storage/` | Almacenamiento S3 | domain + aws-sdk-s3 |
-| `crates/monitoring/` | Healthchecks | domain + reqwest |
-| `crates/jobs/` | Apalis jobs (métricas, alertas, intrusiones) | domain + apalis |
-| `crates/sync/` | Sincronización offline | domain + tokio |
-| `crates/snmp/` | Recolección SNMP | domain + snmp + tokio |
-| `crates/topology/` | Topología de red | domain |
-| `apps/api/` | API REST | infrastructure + todos los crates |
-| `apps/web/` | Dashboard SvelteKit | SvelteKit + componentes monitoreo |
-| `apps/agent/` | Agente de monitoreo en sedes | snmp + sync + monitoring |
+### Crates principales (se crean en orden durante Génesis)
 
+```
+crates/
+├── domain/        # Sin dependencias externas — solo thiserror, uuid, time, serde
+├── application/  # Casos de uso — solo domain
+├── database/     # SQLx + repositorios — domain + sqlx
+├── auth/         # PASETO + argon2 — domain + pasetors
+├── infrastructure/ # Axum + config + utoipa
+└── ...
+
+apps/
+├── api/          # Axum server
+├── web/          # SvelteKit
+├── agent/        # Agente de monitoreo
+└── ...
+```
 ---
 
 ## Migraciones de Base de Datos
 
-| Migración | Descripción |
-|-----------|-------------|
-| `users` | users + user_roles (Soft Delete) |
-| `rbac` | roles, permissions, role_permissions |
-| `tokens` | tokens (verificación + reset) |
-| `audit_logs` | auditoría |
-| `sessions` | sesiones |
-| `sedes` | sedes institucionales |
-| `devices` | dispositivos de red |
-| `device_links` | conexiones entre dispositivos |
-| `metric_readings` | métricas de red |
-| `alerts` | alertas del sistema |
-| `intrusion_events` | detecciones de intrusos |
+> Ver `03-ROADMAP-BACKEND.md` para la lista completa de migraciones.
+
+Principales tablas: users, roles, permissions, sessions, audit_logs, sedes, devices, metric_readings, alerts, intrusion_events
 
 ---
 
@@ -169,9 +159,9 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 4. **Soft Delete** — UPDATE `deleted_at`, nunca DELETE real
 5. Toda acción autenticada → `audit_logs` automático
 6. `cargo-deny` + `cargo-audit` en CI siempre
-7. **SSE preferido sobre WebSocket** (ADR 0035)
-8. **Local-First** para operación offline (ADR 0024, ADR 0035)
-9. Agentes ligeros en sedes remotas (ADR 0035)
+7. **SSE preferido sobre WebSocket** (ADR 0020)
+8. **Local-First** para operación offline (ADR 0020)
+9. Agentes ligeros en sedes remotas (ADR 0020)
 10. Fail-fast en config — si falta variable, el proceso no arranca
 
 ---
@@ -183,8 +173,8 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 - `ROADMAP-BACKEND.md` — backend con entidades y endpoints de monitoreo
 - `ROADMAP-FRONTEND.md` — dashboard, dispositivos, métricas, topología, alertas
 - `ROADMAP-AUTH-FULLSTACK.md` — login/registro back+front
-- `ROADMAP-INFRA.md` — deploy, Caddy, Kamal, Litestream
-- `ADR-0035-monitoreo-infraestructura-regional.md` — definición completa del proyecto
+- `ROADMAP-INFRA.md` — deploy con Coolify + PostgreSQL
+- `ADR-0020-monitoreo-infraestructura-regional.md` — definición completa del proyecto
 
 ---
 
@@ -228,11 +218,33 @@ Cada respuesta tiene exactamente:
 
 → Señala el problema, explica por qué viola la arquitectura, da la solución correcta.
 
-### Regla 5 — Nunca asumir, siempre verificar
+### Regla 5 — Modo experto activo siempre
+
+Puedes y debes:
+
+- Proponer mejoras si ves algo subóptimo
+- Señalar trade-offs con pros y contras concretos
+- Anticipar problemas de escala
+
+### Regla 6 — Trabajo en paralelo cuando tiene sentido
+
+**Válido:**
+- Backend I — Migraciones + Frontend I — Setup 
+- Backend III — Auth + Frontend II — Tipos y store
+- Auth Fullstack + Landing (Landing no necesita auth completo)
+
+**Inválido:**
+- Backend II antes de que las 6 migraciones pasen (Backend I)
+- Deploy (Infra) antes de que el MVP esté listo
+- Desktop antes de que el MVP web esté en producción
+
+
+### Regla 7 — Nunca asumir, siempre verificar
 
 Si algo no está claro, pregunta antes de escribir.
 
-### Regla 6 — Encabezado de archivos (documentación)
+
+### Regla 8 — Encabezado de archivos (documentación)
 
 **Todo archivo de código debe comenzar con este encabezado estándar:**
 
@@ -268,6 +280,100 @@ impl UserId {
     }
 }
 ```
+
+**Estructura del encabezado:**
+
+| Elemento | Requerido | Descripción |
+|----------|-----------|-------------|
+| `//! Ubicación:` | ✅ | Ruta exacta desde root del proyecto |
+| `//! Descripción:` | ✅ | Qué hace este archivo, contexto de uso |
+| `//! ADRs relacionados:` | 🟡 | Referencias a decisiones arquitectónicas |
+| Doc comments (`///`) | ✅ | Toda función pública debe tener doc comment con ejemplos |
+
+**Aplica a:**
+- Archivos Rust (`.rs`): `//!` para módulo, `///` para items
+- Archivos TypeScript (`.ts`): `/** */` JSDoc al inicio
+- Archivos SQL (`.sql`): `--` comentarios multilínea al inicio
+- Configuraciones (`.yml`, `.toml`): `#` comentario descriptivo
+
+**Ejemplo TypeScript:**
+
+```typescript
+/**
+ * Ubicación: `apps/web/src/lib/stores/auth.svelte.ts`
+ * 
+ * Descripción: Store de autenticación con TanStack Query. Gestiona estado de sesión,
+ *              tokens PASETO y sincronización con API. Reactive con Svelte 5 Runes.
+ * 
+ * ADRs: 0022 (Frontend), 0008 (PASETO)
+ */
+
+import { createQuery } from '@tanstack/svelte-query';
+
+/**
+ * Hook para obtener estado de autenticación actual
+ * @returns AuthState con usuario, tokens y métodos de login/logout
+ * @example
+ * const auth = getAuthState();
+ * $effect(() => { if (auth.isAuthenticated) { ... } });
+ */
+export function getAuthState(): AuthState {
+    // ...
+}
+```
+
+### Regla 9 — Mejora continua: investigar y proponer
+
+Aunque existan guías y roadmaps definidos, siempre mantener ojo crítico activo:
+
+**Durante cada tarea, preguntarse:**
+- ¿Esta dependencia tiene versión más reciente estable?
+- ¿Este flujo se puede simplificar con una nueva herramienta?
+- ¿Hay boilerplate repetitivo que se puede abstraer?
+- ¿La DX (Developer Experience) se puede mejorar?
+
+**Si detectas mejora potencial:**
+1. **Proponer primero** — explicar el problema, la mejora, pros/contras
+2. **Consultar antes de modificar roadmaps** — no cambiar documentación sin consenso
+3. **Si aprobado** — actualizar roadmap + implementar + documentar decisión
+
+**Verificación de versiones (2026+):**
+Las versiones fijadas en roadmaps pueden quedar desactualizadas. Antes de implementar:
+- Verificar última versión estable en crates.io, npm, o docs oficiales
+- Comparar changelog por breaking changes
+- Actualizar roadmaps si la nueva versión es estable y compatible
+
+**Comandos para verificar versiones actuales:**
+```bash
+# Rust crates
+cargo search <crate> --limit 1
+
+# npm/pnpm packages
+npm view <package> versions --json | tail -5
+
+# Herramientas cargo
+cargo install --list
+
+# Versiones instaladas vs disponibles
+cargo tree --depth 1 | grep <crate>
+```
+
+**Antes de cada instalación:**
+1. El usuario VERIFICA la versión actual con los comandos arriba
+2. El usuario CONFIRMA la versión a instalar
+3. Luego se actualiza el roadmap y se ejecuta
+
+**Ejemplos de mejora válidos:**
+- Nueva versión de crate con API más limpia
+- Mejor herramienta de linting/formatting disponible
+- Patrón de código repetitivo → macro/generador
+- DX mejorada (ej: `just` command que combine 3 pasos)
+
+**Ejemplos NO válidos:**
+- Cambiar stack base (Axum → Actix) sin criterio medido
+- Añadir complejidad por "mejor práctica" teórica no probada
+- Romper reglas arquitectónicas por conveniencia
+
 
 ---
 
@@ -318,4 +424,4 @@ just doctor
 ---
 
 **Proyecto:** Monitoreo de Infraestructura Regional - Gobernación del Beni  
-**Referencia Principal:** ADR 0035
+**Referencia Principal:** ADR 0020

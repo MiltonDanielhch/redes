@@ -5,7 +5,7 @@
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Relacionado con** | ADR 0004 (postgresql), ADR 0008 (Seguridad), ADR 0012 (CLI Setup), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0004 (postgresql), ADR 0008 (Seguridad), ADR 0012 (CLI Setup), ADR 0020 (Monitoreo Regional) |
 
 ---
 

@@ -1,18 +1,17 @@
-# ADR 0032 — Deploy Alternativo: Coolify + SQLite + Litestream
+# ADR 0019 — Deploy con Coolify + PostgreSQL
 
 | Campo               | Valor                                                                                                               |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| **Estado**          | ✅ Aceptado — alternativa válida a Kamal                                                                             |
+| **Estado**          | ✅ Aceptado                                                                                                          |
 | **Fecha**           | 2026                                                                                                                |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                    |
-| **Relacionado con** | ADR 0014 (Deploy — Kamal), ADR 0004 (SQLite + Litestream), ADR 0013 (Containerfile Distroless), ADR VPS (5 Pilares) |
+| **Relacionado con** | ADR 0004 (PostgreSQL + Docker), ADR 0013 (Infraestructura), ADR 0015 (Jobs + Apalis), ADR VPS (5 Pilares) |
 
 ---
 
 # Contexto
 
-El stack principal usa **Kamal** como sistema de deploy (ADR 0014).
-Kamal opera desde la máquina del desarrollador:
+Coolify es una plataforma de deployment todo-en-uno que se ejecuta en el VPS y permite:
 
 * build local
 * push al registry
@@ -34,20 +33,19 @@ Para esto, **Coolify** surge como alternativa self-hosted moderna.
 
 La pregunta clave es:
 
-> ¿Coolify puede ejecutar correctamente este stack basado en SQLite WAL + Litestream sin romper la arquitectura minimalista?
+> ¿Coolify puede ejecutar correctamente este stack basado en PostgreSQL sin romper la arquitectura?
 
 ---
 
 # Decisión
 
-Se acepta **Coolify** como alternativa válida a Kamal para despliegue del stack.
+Se usa **Coolify** como sistema de deploy oficial.
 
 Coolify:
 
 * NO reemplaza la arquitectura actual
 * NO modifica el Containerfile
-* NO altera Litestream
-* NO cambia SQLite
+* NO cambia PostgreSQL
 * NO introduce Kubernetes
 * NO requiere reescribir el sistema
 
@@ -60,9 +58,8 @@ Solo cambia la capa operativa del deploy.
 La aplicación debe seguir siendo:
 
 * un contenedor autónomo
-* con SQLite local
-* Litestream integrado
-* restauración automática
+* con PostgreSQL
+* respaldos automáticos
 * healthcheck HTTP
 * sin dependencias externas obligatorias
 
@@ -70,13 +67,13 @@ Coolify únicamente orquesta el ciclo de vida del contenedor.
 
 ---
 
-# Compatibilidad con SQLite + Litestream
+# Compatibilidad con PostgreSQL
 
 ## Estado
 
 | Componente                 | Compatibilidad                     |
 | -------------------------- | ---------------------------------- |
-| SQLite WAL                 | ✅ Compatible                       |
+| PostgreSQL                 | ✅ Compatible                       |
 | Litestream sidecar interno | ✅ Compatible                       |
 | Distroless                 | ✅ Compatible                       |
 | Axum                       | ✅ Compatible                       |
@@ -113,11 +110,11 @@ Traffic swap
 
 ---
 
-# Persistencia de SQLite
+# Persistencia de PostgreSQL
 
 ## Regla obligatoria
 
-SQLite debe vivir en un volumen persistente Docker.
+PostgreSQL debe vivir en un volumen persistente Docker.
 
 En Coolify:
 
@@ -261,7 +258,7 @@ Git Push → Webhook → Auto Deploy
 | SSL                 | Caddy manual | Automático       |
 | Rollback            | CLI          | Visual           |
 | Multi-app           | Manual       | Integrado        |
-| SQLite + Litestream | ✅ Excelente  | ✅ Excelente      |
+| PostgreSQL          | ✅ Excelente  | ✅ Excelente      |
 | VPS ideal           | $5           | $10+             |
 | Complejidad         | Baja         | Media            |
 | Dependencias        | Docker       | Docker + Coolify |
@@ -317,12 +314,12 @@ Esto consume memoria adicional.
 
 ## Reglas obligatorias
 
-* Nunca exponer SQLite fuera del contenedor
+* Nunca exponer PostgreSQL fuera del contenedor
 * `/data` solo accesible internamente
 * Secrets únicamente en variables cifradas
 * HTTPS obligatorio
 * Healthcheck obligatorio
-* Litestream siempre activo
+* Backups automáticos activados
 
 ---
 
@@ -334,12 +331,9 @@ Coolify es compatible con:
 | ------------------------------ | -------------- |
 | ADR 0001 — Monolito Modular    | ✅              |
 | ADR 0003 — Axum                | ✅              |
-| ADR 0004 — SQLite + Litestream | ✅              |
-| ADR 0013 — Distroless          | ✅              |
-| ADR 0018 — Apalis              | ✅              |
-| ADR 0016 — Resend              | ✅              |
-| ADR 0022 — Frontend SvelteKit  | ✅              |
-| ADR 0029 — Landing SSR         | ✅              |
+| ADR 0004 — PostgreSQL           | ✅              |
+| ADR 0015 — Apalis              | ✅              |
+| ADR 0017 — Frontend SvelteKit  | ✅              |
 
 ---
 
@@ -380,7 +374,7 @@ Coolify es compatible con:
 * Rollbacks visuales
 * Multi-proyecto en un solo VPS
 * Deploy automático vía Git
-* Litestream y SQLite funcionan sin cambios
+* PostgreSQL funciona sin cambios
 * No se rompe la arquitectura minimalista
 
 ---
@@ -436,4 +430,4 @@ Coolify brilla cuando existen múltiples aplicaciones.
 * VPS de 1GB → Kamal recomendado
 * VPS de 2GB+ → Coolify válido
 * El deploy nunca depende de Kubernetes
-* SQLite sigue siendo la base oficial del proyecto
+* PostgreSQL es la base oficial del proyecto

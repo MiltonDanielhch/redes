@@ -1,11 +1,11 @@
-# ADR 0028 — Sintonía CLI: Generador Arquitectónico + RBAC + Guardián de Arquitectura
+# ADR 0018 — Sintonía CLI: Generador Arquitectónico + RBAC + Guardián de Arquitectura
 
 | Campo               | Valor                                                                                                                                           |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado — implementación progresiva desde Fase 2                                                                                             |
 | **Fecha**           | 2026                                                                                                                                            |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                |
-| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0005 (Migraciones SQL), ADR 0006 (RBAC + Audit), ADR 0010 (Testing), ADR 0021 (OpenAPI), ADR 0027 (ConnectRPC) |
+| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0005 (Migraciones SQL), ADR 0006 (RBAC + Audit), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs) |
 
 ---
 

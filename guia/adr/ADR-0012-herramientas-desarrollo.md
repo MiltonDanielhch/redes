@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                               |
 | **Fecha**           | 2026-05-15                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                         |
-| **Relacionado con** | ADR 0010 (Testing), ADR 0011 (Estándares de Desarrollo), ADR 0014 (Deploy), ADR 0027 (Tipos compartidos) |
+| **Relacionado con** | ADR 0010 (Testing), ADR 0011 (Estándares de Desarrollo), ADR 0013 (Deploy), ADR 0016 (OpenAPI) |
 
 ---
 

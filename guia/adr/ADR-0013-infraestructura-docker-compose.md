@@ -1,11 +1,11 @@
-# ADR 0014 — Infraestructura: Docker Compose + Red Privada
+# ADR 0013 — Infraestructura: Docker Compose + Red Privada
 
 | Campo               | Valor                                                                                            |
 | ------------------- | ------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                       |
 | **Fecha**           | 2026-05-15                                                                                       |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                 |
-| **Relacionado con** | ADR 0013 (Build externo), ADR 0012 (Tooling), ADR 0003 (Backend Axum), ADR 0016 (Observabilidad) |
+| **Relacionado con** | ADR 0012 (Tooling), ADR 0003 (Backend Axum), ADR 0014 (Monitoreo) |
 
 ---
 

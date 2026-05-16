@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                                      |
 | **Fecha**           | 2026                                                                                                            |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                |
-| **Relacionado con** | ADR 0003 (Axum + Tower middleware), ADR 0008 (Auth — límites por endpoint), ADR 0016 (Tracing / observabilidad) |
+| **Relacionado con** | ADR 0003 (Axum + Tower middleware), ADR 0008 (Auth — límites por endpoint), ADR 0015 (Monitoreo) |
 
 ---
 

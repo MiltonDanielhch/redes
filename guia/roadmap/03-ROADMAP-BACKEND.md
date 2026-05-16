@@ -1,10 +1,10 @@
 # Roadmap — Backend (Monitoreo de Infraestructura Regional)
 
-> **Stack:** Rust 2024 · Axum 0.8 · SQLx 0.8 · SQLite WAL · PASETO v4 · Apalis · Utoipa
+> **Stack:** Rust 2024 · Axum 0.8 · SQLx 0.8 · PostgreSQL · PASETO v4 · Apalis · Utoipa
 >
 > **Proyecto:** Monitoreo de Infraestructura Regional - Gobernación del Beni
-> **ADRs clave:** 0035 (Monitoreo Regional) · 0001 (Arquitectura) · 0003 (Axum) · 0004 (SQLite) · 
-> 0006 (RBAC) · 0007 (Errores) · 0008 (Auth) · 0009 (Rate Limit) · 0010 (Testing) · 0024 (Local-First)
+> **ADRs clave:** 0020 (Monitoreo Regional) · 0001 (Arquitectura) · 0003 (Axum) · 0004 (PostgreSQL) · 
+> 0006 (RBAC) · 0007 (Errores) · 0008 (Auth) · 0009 (Rate Limit) · 0010 (Testing) · 0015 (Jobs)
 
 ---
 
@@ -34,11 +34,11 @@
 ## Bloque I — Fundación (Dominio + DB + RBAC) 🔥
 
 > **NO pasar al Bloque II sin el dominio compilando limpio.**
-> **ADR 0035, 0001, 0004, 0006**
+> **ADR 0020, 0001, 0004, 0006**
 
-### I.1 — Pool SQLite con PRAGMAs
+### I.1 — Pool PostgreSQL con PRAGMAs
 
-> **Referencia:** ADR 0004, ADR 0035
+> **Referencia:** ADR 0004, ADR 0020
 
 ```
 [ ] crates/database/src/pool.rs — create_pool():
@@ -54,9 +54,9 @@
 [ ] Verificar que el pool conecta al arrancar
 ```
 
-### I.2 — Migraciones del sistema (ADR 0006, ADR 0035)
+### I.2 — Migraciones del sistema (ADR 0006, ADR 0020)
 
-> **Referencia:** ADR 0006, ADR 0005, ADR 0035
+> **Referencia:** ADR 0006, ADR 0005, ADR 0020
 
 ```
 [ ] data/migrations/20260305135148_create_users_table.sql
@@ -86,7 +86,7 @@
 [ ] data/migrations/20260305135153_create_sessions.sql
     [ ] tabla sessions (IP + UA + expiry)
 
-[ ] Migraciones específicas de Monitoreo (ADR 0035):
+[ ] Migraciones específicas de Monitoreo (ADR 0020):
     [ ] data/migrations/create_sedes.sql
         [ ] tabla sedes (nombre, ubicación, secretaría)
     [ ] data/migrations/create_devices.sql
@@ -102,7 +102,7 @@
         [ ] tabla intrusion_events (mac, ip, detected_at, status)
 ```
 
-### I.3 — Dominio puro — crates/domain/ (ADR 0001, ADR 0035)
+### I.3 — Dominio puro — crates/domain/ (ADR 0001, ADR 0020)
 
 > **Regla:** crates/domain/Cargo.toml solo tiene thiserror, uuid, time, serde.
 > Si sqlx o axum aparecen aquí → la arquitectura está rota.
@@ -115,7 +115,7 @@
 
 [ ] entities/role.rs + entities/session.rs + entities/audit_log.rs
 
-[ ] ENTIDADES DE MONITOREO (ADR 0035):
+[ ] ENTIDADES DE MONITOREO (ADR 0020):
     [ ] entities/sede.rs
         [ ] struct Sede { id, nombre, ubicacion, secretaria, created_at }
     [ ] entities/device.rs
@@ -136,7 +136,7 @@
 
 [ ] ports/user_repository.rs, session_repository.rs, audit_repository.rs, token_repository.rs
 
-[ ] PUERTOS DE MONITOREO (ADR 0035):
+[ ] PUERTOS DE MONITOREO (ADR 0020):
     [ ] ports/device_repository.rs
         [ ] find_by_id, find_by_sede, find_by_type, save, update_status, list
     [ ] ports/sede_repository.rs
@@ -161,7 +161,7 @@
 
 [ ] use_cases/users/get_user.rs, list_users.rs, update_user.rs, soft_delete_user.rs
 
-[ ] USE CASES DE MONITOREO (ADR 0035):
+[ ] USE CASES DE MONITOREO (ADR 0020):
     [ ] use_cases/monitoring/register_device.rs
     [ ] use_cases/monitoring/update_device_status.rs
     [ ] use_cases/monitoring/list_devices.rs
@@ -180,7 +180,7 @@
 
 [ ] models/user_row.rs, audit_row.rs
 
-[ ] MODELOS DE MONITOREO (ADR 0035):
+[ ] MODELOS DE MONITOREO (ADR 0020):
     [ ] models/sede_row.rs
     [ ] models/device_row.rs
     [ ] models/metric_row.rs
@@ -189,7 +189,7 @@
 
 [ ] repositories/sqlite_user_repository.rs, cached_user_repository.rs
 
-[ ] REPOSITORIOS DE MONITOREO (ADR 0035):
+[ ] REPOSITORIOS DE MONITOREO (ADR 0020):
     [ ] repositories/sqlite_sede_repository.rs
     [ ] repositories/sqlite_device_repository.rs
     [ ] repositories/sqlite_metrics_repository.rs
@@ -228,7 +228,7 @@ cargo nextest run -p database
 [ ] apps/api/src/router.rs — router modular
     [ ] GET  /health
     [ ] POST /auth/register, /auth/login, /auth/refresh, /auth/logout
-    [ ] Rutas de MONITOREO (ADR 0035):
+    [ ] Rutas de MONITOREO (ADR 0020):
         [ ] GET/POST /api/v1/sedes
         [ ] GET/POST /api/v1/devices
         [ ] GET/PUT /api/v1/devices/:id
@@ -317,7 +317,7 @@ cargo nextest run -p database
 
 ---
 
-## Bloque IV — OpenAPI + Scalar (ADR 0021)
+## Bloque IV — OpenAPI + Scalar (ADR 0016)
 
 ```
 [ ] #[derive(ToSchema)] en todos los DTOs de request/response
@@ -352,7 +352,7 @@ cargo nextest run -p database
     [ ] build_mailer(): selecciona según ENVIRONMENT
 ```
 
-### V.3 — Jobs con Apalis (ADR 0018, ADR 0035)
+### V.3 — Jobs con Apalis (ADR 0018, ADR 0020)
 
 ```
 [ ] apps/api/src/jobs/metrics_aggregation_job.rs
@@ -370,7 +370,7 @@ cargo nextest run -p database
 
 ---
 
-## Bloque VI — Observabilidad (ADR 0015, ADR 0035)
+## Bloque VI — Observabilidad (ADR 0015, ADR 0020)
 
 ```
 [ ] apps/api/src/setup.rs — init_telemetry()
@@ -380,14 +380,14 @@ cargo nextest run -p database
 [ ] Sentry SDK
     [ ] sentry::init() con SENTRY_DSN (opcional)
 
-[ ] Healthchecks.io (ADR 0015, ADR 0035)
+[ ] Healthchecks.io (ADR 0015, ADR 0020)
     [ ] HC_WORKER_UUID para worker de métricas
     [ ] HC_LITESTREAM_UUID para backups
 ```
 
 ---
 
-## Bloque VII — Monitoreo (ADR 0035)
+## Bloque VII — Monitoreo (ADR 0020)
 
 ### VII.1 — Inventario de Dispositivos
 
@@ -487,13 +487,13 @@ cargo nextest run -p database
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  BLOQUE I — Fundación                                                  │
-│  ├─ Pool SQLite (WAL + PRAGMAs)                                       │
+│  ├─ Pool PostgreSQL (WAL + PRAGMAs)                                       │
 │  ├─ Migraciones (users, roles, devices, metrics, alerts, intrusions)  │
 │  ├─ crates/domain (entities, value_objects, ports, errors)           │
 │  │   └─ Entidades de Monitoreo: Sede, Device, Metric, Alert          │
 │  ├─ crates/application (use_cases)                                    │
 │  └─ crates/database (repositories SQLx + Moka cache)                   │
-│     └─ Ref: ADR 0035, 0001, 0004, 0006                               │
+│     └─ Ref: ADR 0020, 0001, 0004, 0006                               │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -524,7 +524,7 @@ cargo nextest run -p database
 │  ├─ #[utoipa::path] en cada handler                                  │
 │  ├─ /docs → Scalar UI                                                │
 │  └─ /openapi.json → spec completa                                     │
-│     └─ Ref: ADR 0021                                                  │
+│     └─ Ref: ADR 0016                                                  │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -548,13 +548,13 @@ cargo nextest run -p database
                            │
                            ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│  BLOQUE VII — Monitoreo (ADR 0035)                                     │
+│  BLOQUE VII — Monitoreo (ADR 0020)                                     │
 │  ├─ Inventario: CRUD de sedes y dispositivos                         │
 │  ├─ Métricas: recolección, agregación, histórico                     │
 │  ├─ Topología: mapa de red por sede                                  │
 │  ├─ Alertas: detección, notificación, Ack                           │
 │  └─ Intrusiones: detección, resolución                                │
-│     └─ Ref: ADR 0035, 0024 (Local-First)                             │
+│     └─ Ref: ADR 0020, 0015 (Jobs)                             │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -572,7 +572,7 @@ cargo nextest run -p database
 | **snmp** | https://crates.io/crates/snmp | Recolección SNMP |
 | **LayerChart** | https://layerchart.com | Gráficos realtime |
 | **SvelteKit** | https://kit.svelte.dev | Frontend SSR |
-| **Litestream** | https://litestream.io | Backups SQLite |
+| **Litestream** | https://litestream.io | Backups PostgreSQL |
 
 ---
 
@@ -584,7 +584,7 @@ cargo nextest run -p database
 |---------|---------------|----------|
 | `cargo check -p domain` falla | sqlx importado en domain | Verificar Cargo.toml no tenga sqlx |
 | `just migrate` error | DATABASE_URL no seteada | Exportar DATABASE_URL |
-| Entidades de monitoreo no compilan | Falta algún campo | Revisar ADR 0035 |
+| Entidades de monitoreo no compilan | Falta algún campo | Revisar ADR 0020 |
 
 ### Bloque II — API
 
@@ -603,4 +603,4 @@ cargo nextest run -p database
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 (Módulo de Monitoreo de Infraestructura Regional) para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 (Módulo de Monitoreo de Infraestructura Regional) para la Gobernación del Beni.

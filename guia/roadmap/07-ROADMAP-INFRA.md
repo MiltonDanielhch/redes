@@ -1,8 +1,8 @@
 # Roadmap — Infraestructura y Deploy (Monitoreo de Infraestructura Regional)
 
-> **Stack:** Podman rootless · Caddy · Kamal · Litestream · Tigris S3 · Healthchecks.io
+> **Stack:** Podman rootless · Caddy · Coolify · PostgreSQL · Healthchecks.io
 >
-> **ADRs:** 0035 (Monitoreo) · 0013 (Build) · 0014 (Deploy) · 0004 (Litestream) · 0015 (Monitoreo)
+> **ADRs:** 0020 (Monitoreo) · 0019 (Coolify) · 0013 (Build) · 0004 (PostgreSQL) · 0014 (Monitoreo)
 
 ---
 
@@ -20,7 +20,7 @@
 |--------|--------|----------|
 | INF.I | Containerfile distroless | [ ] |
 | INF.II | Caddy — TLS + seguridad | [ ] |
-| INF.III | Litestream + S3 | [ ] |
+| INF.III | PostgreSQL + Backups | [ ] |
 | INF.IV | Kamal — deploy zero-downtime | [ ] |
 | INF.V | Seguridad del VPS | [ ] |
 | INF.VI | Monitoreo y alertas | [ ] |
@@ -61,7 +61,7 @@
 
 ---
 
-## INF.III — Litestream + S3 (ADR 0004, ADR 0035)
+## INF.III — PostgreSQL + Backups (ADR 0004, ADR 0020)
 
 ```
 [ ] Credenciales Tigris en .env:
@@ -116,12 +116,12 @@
 
 ---
 
-## INF.VI — Monitoreo y alertas (ADR 0015, ADR 0035)
+## INF.VI — Monitoreo y alertas (ADR 0015, ADR 0020)
 
 ```
 [ ] Healthchecks.io — crear checks:
     [ ] HC_WORKER_UUID → Apalis worker (5min)
-    [ ] HC_LITESTREAM_UUID → Litestream (1h)
+    [ ] HC_POSTGRES_UUID → PostgreSQL (1h)
     [ ] HC_TLS_UUID → TLS (24h)
     [ ] HC_DEPLOY_UUID → Deploy (manual)
 
@@ -130,7 +130,7 @@
 
 [ ] Integración en código:
     [ ] Worker hace ping a HC_WORKER_UUID
-    [ ] Litestream script hace ping a HC_LITESTREAM_UUID
+    [ ] PostgreSQL healthcheck hace ping a HC_POSTGRES_UUID
     [ ] just deploy hace ping a HC_DEPLOY_UUID
 ```
 
@@ -167,10 +167,10 @@ litestream snapshots s3://bucket/boilerplate/db
 |---------|----------|
 | Build falla "sqlx not found" | just prepare + commit |
 | Imagen > 15MB | Usar distroless |
-| Litestream no replica | Verificar credenciales AWS |
+| PostgreSQL no conecta | Verificar DATABASE_URL |
 | Deploy falla healthcheck | Verificar /health endpoint |
 | SSH rechazado | Verificar clave pública |
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 (Monitoreo de Infraestructura Regional) para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 (Monitoreo de Infraestructura Regional) para la Gobernación del Beni.

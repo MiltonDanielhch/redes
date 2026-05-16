@@ -5,7 +5,7 @@
 | **Estado**      | ✅ Aceptado                                                      |
 | **Fecha**       | 2026                                                            |
 | **Autores**     | Milton Hipamo / Laboratorio 3030                                |
-| **Revisado en** | ADR 0001 (Arquitectura Hexagonal), ADR 0014 (Deploy Distroless), ADR 0035 (Monitoreo Regional) |
+| **Revisado en** | ADR 0001 (Arquitectura Hexagonal), ADR 0013 (Deploy), ADR 0020 (Monitoreo Regional) |
 
 ---
 

@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                                               |
 | **Fecha**           | 2026-05-15                                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                         |
-| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0010 (Testing), ADR 0012 (just + lefthook), ADR 0014 (Deploy), ADR 0016 (Tracing) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0010 (Testing), ADR 0012 (just + lefthook), ADR 0013 (Deploy) |
 
 ---
 

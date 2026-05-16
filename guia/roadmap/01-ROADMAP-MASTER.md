@@ -2,7 +2,7 @@
 
 > El mapa de todos los mapas. Cada bloque tiene su propio documento detallado.
 > **Proyecto:** Sistema de Monitoreo de Infraestructura de Red Institucional
-> **Referencia Principal:** ADR 0035 (Módulo de Monitoreo de Infraestructura Regional)
+> **Referencia Principal:** ADR 0020 (Módulo de Monitoreo de Infraestructura Regional)
 > **Fuente de verdad:** este archivo + ADRs en `guia/adr/`
 
 ---
@@ -27,13 +27,13 @@
 DÍA 1 ─── GÉNESIS
 │         Workspace + crates (domain, application, infrastructure, database)
 │         + tooling (mise, just, lefthook)
-│         + estructura del proyecto según ADR 0035
+│         + estructura del proyecto según ADR 0020
 │         cargo check --workspace ✓
 │
 DÍA 2 ─── BACKEND I — Fundación 🔥 CRÍTICO
 │         entities: Sede, Dispositivo, Métrica, Alerta
 │         ports: repositories para inventario, métricas, alertas
-│         6 migraciones + SQLite + Litestream
+│         6 migraciones + PostgreSQL
 │
 DÍA 3 ─── BACKEND II + FRONTEND I (paralelo)
 │         Axum setup + API REST ← Backend
@@ -70,7 +70,7 @@ DÍA 10+ ─ AGENTES DISTRIBUIDOS
 │         Sincronización offline
 │
 DÍA 12+ ─ LOCAL-FIRST
-│         SQLite Wasm en navegador
+│         PostgreSQL en servidor
 │         Sync queue para operación offline
 ```
 
@@ -119,7 +119,7 @@ pnpm dev → arranca sin errores
 RBAC → botones ocultos sin permiso
 ```
 
-### Monitoreo (ADR 0035)
+### Monitoreo (ADR 0020)
 ```
 Inventario de dispositivos → CRUD completo
 Topología de red → mapa visual por sede
@@ -139,7 +139,7 @@ litestream snapshots → entradas de hoy
 
 ---
 
-## Reglas de oro — el contrato del proyecto (ADR 0035)
+## Reglas de oro — el contrato del proyecto (ADR 0020)
 
 | # | Regla | Garantizada por | ADR |
 |---|-------|----------------|-----|
@@ -153,9 +153,9 @@ litestream snapshots → entradas de hoy
 | 8 | Imagen distroless — ~10MB, sin shell | Containerfile | 0013 |
 | 9 | Fail-fast en config al arrancar | AppConfig::load() | 0002 |
 | 10 | No añadir Fase 2 hasta que el problema exista | Decisión consciente | 0011 |
-| 11 | Local-First para operación offline | SQLite Wasm + sync queue | 0024, 0035 |
-| 12 | SSE preferido sobre WebSockets | ADR 0035 | 0035 |
-| 13 | Agentes ligeros en sedes remotas | ADR 0035 | 0035 |
+| 11 | Local-First para operación offline | SQLite Wasm + sync queue | 0020 |
+| 12 | SSE preferido sobre WebSockets | ADR 0020 | 0020 |
+| 13 | Agentes ligeros en sedes remotas | ADR 0020 | 0020 |
 
 ---
 
@@ -190,7 +190,7 @@ litestream snapshots → entradas de hoy
 | `ROADMAP-AUTH-FULLSTACK.md` | Login/Registro back+front coordinados |
 | `ROADMAP-INFRA.md` | Deploy, Caddy, Kamal, Litestream |
 | `ROADMAP-MONITOREO.md` | Monitoreo de red (inventario, métricas, topología) |
-| `guia/adr/` | 35 ADRs activos (incluye ADR 0035) |
+| `guia/adr/` | 20 ADRs activos (incluye ADR 0020) |
 
 ---
 
@@ -199,23 +199,22 @@ litestream snapshots → entradas de hoy
 | Componente | Tecnología | ADR |
 |------------|------------|-----|
 | Backend | Rust + Axum | ADR 0003 |
-| Frontend | SvelteKit + Svelte 5 | ADR 0022 |
-| DB | SQLite + Litestream | ADR 0004, ADR 0035 |
+| Frontend | SvelteKit + Svelte 5 | ADR 0017 |
+| DB | PostgreSQL | ADR 0004 |
+| Deploy | Coolify | ADR 0019 |
 | Auth | PASETO | ADR 0008 |
-| Jobs | Apalis | ADR 0018 |
-| Mail | Resend + React Email | ADR 0016 |
-| Storage | Tigris (S3) | ADR 0020 |
-| Monitoreo | Healthchecks.io | ADR 0015 |
-| Realtime | SSE | ADR 0022, ADR 0035 |
-| Offline | Local-First | ADR 0024, ADR 0035 |
-| API Docs | OpenAPI + Utoipa | ADR 0021 |
-| gRPC | ConnectRPC | ADR 0027 |
-| SNMP | snmp crate | ADR 0035 |
-| Topología | LayerChart | ADR 0035 |
+| Jobs | Apalis | ADR 0015 |
+| Mail | Resend + React Email | ADR (futuro) |
+| Monitoreo | Healthchecks.io | ADR 0014 |
+| Realtime | SSE | ADR 0017, ADR 0020 |
+| API Docs | OpenAPI + Utoipa | ADR 0016 |
+| gRPC | ConnectRPC | ADR 0015 |
+| SNMP | snmp crate | ADR 0020 |
+| Topología | LayerChart | ADR 0020 |
 
 ---
 
-## Componentes del Módulo de Monitoreo (ADR 0035)
+## Componentes del Módulo de Monitoreo (ADR 0020)
 
 | Componente  | Responsabilidad                   |
 | ----------- | --------------------------------- |
@@ -229,4 +228,4 @@ litestream snapshots → entradas de hoy
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 que define el proyecto de Monitoreo de Infraestructura Regional para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 que define el proyecto de Monitoreo de Infraestructura Regional para la Gobernación del Beni.

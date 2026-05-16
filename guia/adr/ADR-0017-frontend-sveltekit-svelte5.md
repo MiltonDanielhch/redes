@@ -1,12 +1,12 @@
 ````md
-# ADR 0022 — Frontend: SvelteKit + Svelte 5 Runes + ConnectRPC
+# ADR 0017 — Frontend: SvelteKit + Svelte 5 Runes + ConnectRPC
 
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Relacionado con** | ADR 0003 (Axum), ADR 0010 (Testing), ADR 0021 (OpenAPI), ADR 0027 (ConnectRPC), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0003 (Axum), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
 

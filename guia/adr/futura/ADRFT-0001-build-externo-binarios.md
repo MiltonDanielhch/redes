@@ -1,11 +1,11 @@
-# ADR 0013 — Build Externo: Distroless ~10MB
+# ADR (futuro) — Build Externo: Distroless ~10MB
 
 | Campo               | Valor                                                                   |
 | ------------------- | ----------------------------------------------------------------------- |
-| **Estado**          | ✅ Aceptado                                                              |
+| **Estado**          | ⏳ Pendiente                                                              |
 | **Fecha**           | 2026                                                                    |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                        |
-| **Relacionado con** | ADR 0014 (Containerfile + Kamal), ADR 0010 (CI), ADR 0012 (just deploy) |
+| **Relacionado con** | ADR 0013 (Containerfile + Kamal), ADR 0010 (CI), ADR 0012 (just deploy) |
 
 ---
 

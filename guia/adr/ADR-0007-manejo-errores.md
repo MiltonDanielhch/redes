@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                             |
 | **Fecha**           | 2026                                                                   |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                       |
-| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0016 (Tracing) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0015 (Monitoreo) |
 
 ---
 

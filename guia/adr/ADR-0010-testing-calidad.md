@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                                                     |
 | **Fecha**           | 2026                                                                                                                           |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                               |
-| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0004 (PostgreSQL + SQLx), ADR 0008 (PASETO + Auth), ADR 0016 (Tracing y observabilidad) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0004 (PostgreSQL + SQLx), ADR 0008 (PASETO + Auth), ADR 0015 (Monitoreo) |
 
 ---
 

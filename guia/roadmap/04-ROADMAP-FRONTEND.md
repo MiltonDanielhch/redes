@@ -3,7 +3,7 @@
 > **Stack:** Astro 6 SSR · Svelte 5 Runes · Tailwind v4 · shadcn-svelte · TanStack Query · ArkType · Paraglide JS · LayerChart
 >
 > **Proyecto:** Sistema de Monitoreo de Infraestructura de Red Institucional
-> **ADRs clave:** 0035 (Monitoreo Regional) · 0022 (Frontend) · 0023 (i18n) · 0006 (RBAC) · 0008 (PASETO) · 0021 (OpenAPI) · 0024 (Local-First)
+> **ADRs clave:** 0020 (Monitoreo Regional) · 0017 (Frontend) · 0006 (RBAC) · 0008 (PASETO) · 0016 (OpenAPI) · 0015 (Jobs)
 
 ---
 
@@ -34,7 +34,7 @@
 
 ## FE.I — Fundación (setup e infraestructura)
 
-> **Referencia:** ADR 0022, ADR 0035
+> **Referencia:** ADR 0017, ADR 0020
 
 ```
 [ ] Astro 6 SSR setup en apps/web/:
@@ -64,7 +64,7 @@
 ## FE.II — Tipos, estado y validación
 
 > **Requiere:** Backend Bloque I completado
-> **Referencia:** ADR 0027, ADR 0022
+> **Referencia:** ADR 0015, ADR 0017
 
 ```
 [ ] apps/web/src/lib/types/*.ts — tipos definidos manualmente:
@@ -106,7 +106,7 @@
 
 ## FE.III — Layouts y navegación
 
-> **Referencia:** ADR 0022, ADR 0008
+> **Referencia:** ADR 0017, ADR 0008
 
 ```
 [ ] BaseLayout.astro
@@ -122,7 +122,7 @@
     [ ] Navegación colapsable — $state collapsed
     [ ] Tooltips en modo colapsado
     [ ] Iconos con lucide-svelte
-    [ ] Items de MONITOREO (ADR 0035):
+    [ ] Items de MONITOREO (ADR 0020):
         [ ] NavItem: href="/dashboard" → Inicio
         [ ] NavItem: href="/dashboard/sedes" → Sedes
         [ ] NavItem: href="/dashboard/devices" → Dispositivos
@@ -147,7 +147,7 @@
 
 ## FE.IV — Dashboard de Monitoreo
 
-> **Referencia:** ADR 0035, ADR 0022
+> **Referencia:** ADR 0020, ADR 0017
 
 ```
 [ ] pages/dashboard/index.astro
@@ -181,7 +181,7 @@
 
 ## FE.V — Inventario y Dispositivos
 
-> **Referencia:** ADR 0035
+> **Referencia:** ADR 0020
 
 ```
 [ ] pages/dashboard/sedes/index.astro
@@ -220,7 +220,7 @@
 
 ## FE.VI — Métricas y Gráficos
 
-> **Referencia:** ADR 0035, ADR 0022
+> **Referencia:** ADR 0020, ADR 0017
 
 ```
 [ ] pages/dashboard/metrics/index.astro
@@ -244,14 +244,14 @@
 [ ] SSE (Server-Sent Events) para realtime:
     [ ] /api/v1/stream/metrics/:device_id
     [ ] Actualización cada 5 segundos
-    [ ]ADR 0022 — SSE preferido sobre WebSocket
+    [ ]ADR 0017 — SSE preferido sobre WebSocket
 ```
 
 ---
 
 ## FE.VII — Topología de Red
 
-> **Referencia:** ADR 0035
+> **Referencia:** ADR 0020
 
 ```
 [ ] pages/dashboard/topology/index.astro
@@ -283,7 +283,7 @@
 
 ## FE.VIII — Alertas e Intrusiones
 
-> **Referencia:** ADR 0035
+> **Referencia:** ADR 0020
 
 ```
 [ ] pages/dashboard/alerts/index.astro
@@ -314,9 +314,9 @@
 
 ---
 
-## FE.IX — i18n y formatters (ADR 0023)
+## FE.IX — i18n y formatters (ADR 0017)
 
-> **Referencia:** ADR 0023, ADR 0035
+> **Referencia:** ADR 0017, ADR 0020
 
 ```
 [ ] Paraglide JS configurado en astro.config.mjs
@@ -365,7 +365,7 @@
 │  ├─ shadcn-svelte + bits-ui                                           │
 │  ├─ TanStack Query + ArkType                                          │
 │  └─ Paraglide JS (i18n)                                               │
-│     └─ Ref: ADR 0035, 0022                                            │
+│     └─ Ref: ADR 0020, 0022                                            │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -376,7 +376,7 @@
 │  ├─ ArkType schemas                                                   │
 │  ├─ API client con Bearer PASETO                                      │
 │  └─ Domain modules (auth, sedes, devices, metrics, alerts)           │
-│     └─ Ref: ADR 0035, 0027, 0022, 0008                              │
+│     └─ Ref: ADR 0020, 0027, 0022, 0008                              │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -387,7 +387,7 @@
 │  ├─ Sidebar (sedés, devices, metrics, topology, alerts, intrusions)  │
 │  ├─ Topbar + CommandPalette                                            │
 │  └─ Pages: login, register, dashboard                                 │
-│     └─ Ref: ADR 0035, 0008, 0006                                      │
+│     └─ Ref: ADR 0020, 0008, 0006                                      │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -398,7 +398,7 @@
 │  ├─ DeviceStatusChart (gráfico de pastel)                             │
 │  ├─ NetworkHealth (estado general de la red)                         │
 │  └─ TanStack Query para métricas globales                             │
-│     └─ Ref: ADR 0035, 0022                                           │
+│     └─ Ref: ADR 0020, 0022                                           │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -409,7 +409,7 @@
 │  ├─ DeviceTable, DeviceForm, DeviceDetail                            │
 │  ├─ PermissionGate para RBAC                                          │
 │  └─ Tipos: switch, router, AP, firewall, server, UPS, cámara         │
-│     └─ Ref: ADR 0035, 0006                                           │
+│     └─ Ref: ADR 0020, 0006                                           │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -420,7 +420,7 @@
 │  ├─ LatencyChart (latencia + packet loss)                             │
 │  ├─ MetricsSummary (promedio, pico, mínimo)                          │
 │  └─ SSE para realtime (5s)                                            │
-│     └─ Ref: ADR 0035, 0022, 0024                                     │
+│     └─ Ref: ADR 0020, 0022, 0024                                     │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -431,7 +431,7 @@
 │  ├─ Colores por estado: verde/amarillo/rojo/azul                      │
 │  ├─ Zoom, pan, click para details                                     │
 │  └─ Legend + Controls                                                 │
-│     └─ Ref: ADR 0035                                                  │
+│     └─ Ref: ADR 0020                                                  │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -442,7 +442,7 @@
 │  ├─ IntrusionList (dispositivos no autorizados)                       │
 │  ├─ Badges por severidad                                               │
 │  └─ Acciones: acknowledge, resolve, false_positive                    │
-│     └─ Ref: ADR 0035, 0016                                           │
+│     └─ Ref: ADR 0020, 0016                                           │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
                            ▼
@@ -453,7 +453,7 @@
 │  ├─ formatDate(timezone America/La_Paz)                              │
 │  ├─ formatNetworkSpeed (Mbps, Kbps) + formatLatency (ms)            │
 │  └─ Términos técnicos del dominio (switch, router, AP, etc.)         │
-│     └─ Ref: ADR 0035, 0023                                           │
+│     └─ Ref: ADR 0020, 0023                                           │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -507,4 +507,4 @@
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 (Módulo de Monitoreo de Infraestructura Regional) para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 (Módulo de Monitoreo de Infraestructura Regional) para la Gobernación del Beni.

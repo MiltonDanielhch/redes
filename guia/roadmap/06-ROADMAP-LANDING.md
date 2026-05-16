@@ -1,7 +1,7 @@
 # Roadmap — Landing Page
 
 > **Nota:** Este roadmap ya no aplica al proyecto actual.
-> El proyecto de Monitoreo de Infraestructura Regional (ADR 0035) no requiere landing page tradicional.
+> El proyecto de Monitoreo de Infraestructura Regional (ADR 0020) no requiere landing page tradicional.
 > En su lugar, el acceso es a través del dashboard de monitoreo con autenticación.
 
 ---
@@ -41,4 +41,4 @@ Pero esto no es una prioridad para el MVP.
 
 ---
 
-**Referencia:** ADR 0035 (Monitoreo de Infraestructura Regional)
+**Referencia:** ADR 0020 (Monitoreo de Infraestructura Regional)

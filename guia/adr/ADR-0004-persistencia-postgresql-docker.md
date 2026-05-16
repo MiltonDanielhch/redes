@@ -1,13 +1,11 @@
-# ADR 0004 — Persistencia con SQLite + Litestream
+# ADR 0004 — Persistencia con PostgreSQL + Docker
 
 | Campo           | Valor                                                                                    |
 | --------------- | ---------------------------------------------------------------------------------------- |
 | **Estado**      | ✅ Aceptado                                                                               |
 | **Fecha**       | 2026                                                                                     |
 | **Autores**     | Milton Hipamo / Laboratorio 3030                                                        |
-| **Revisado en** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Stack Backend), ADR 0035 (Monitoreo Regional) |
-
-> **Nota:** Este ADR fue actualizado de PostgreSQL para el proyecto de Monitoreo de Infraestructura Regional (ADR 0035) debido al bajo consumo de recursos y simplicidad operativa en VPS pequeños.
+| **Revisado en** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Stack Backend), ADR 0020 (Monitoreo Regional) |
 
 ---
 

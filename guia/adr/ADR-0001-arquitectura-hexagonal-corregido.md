@@ -5,7 +5,7 @@
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Revisado en** | ADR 0003 (Stack Backend), ADR 0004 (Persistencia PostgreSQL), ADR 0028 (CLI Arquitectónico) |
+| **Revisado en** | ADR 0003 (Stack Backend), ADR 0004 (Persistencia PostgreSQL), ADR 0018 (CLI Arquitectónico) |
 
 ---
 
@@ -104,7 +104,7 @@ Posibles extensiones futuras (solo si el problema existe):
 - events/ (NATS JetStream — si jobs son muy pesados)
 ```
 
-> **Nota del proyecto actual:** El ADR 0035 define el proyecto de Monitoreo de Infraestructura Regional que solo requiere web (SvelteKit), API (Axum) y agentes de monitoreo.
+> **Nota del proyecto actual:** El ADR 0020 define el proyecto de Monitoreo de Infraestructura Regional que solo requiere web (SvelteKit), API (Axum) y agentes de monitoreo.
 
 Solo se implementarán si existe necesidad operacional real.
 

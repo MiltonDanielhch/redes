@@ -4,7 +4,7 @@
 > 
 > Este roadmap es del proyecto boilerplate original y ya no aplica al proyecto actual.
 >
-> **Proyecto actual:** Monitoreo de Infraestructura Regional (ADR 0035)
+> **Proyecto actual:** Monitoreo de Infraestructura Regional (ADR 0020)
 >
 > El sistema de monitoreo incluye:
 > - Gestión de usuarios integrada en RBAC (ADR 0006)

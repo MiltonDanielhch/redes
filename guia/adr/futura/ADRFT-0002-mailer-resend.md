@@ -1,11 +1,11 @@
-# ADR 0016 — Email Transaccional: Resend + React Email + LogMailer
+# ADR (futuro) — Email Transaccional: Resend + React Email + LogMailer
 
 | Campo               | Valor                                                                                                                                 |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------- |
-| **Estado**          | ✅ Aceptado                                                                                                                             |
+| **Estado**          | ⏳ Pendiente                                                                                                                             |
 | **Fecha**           | 2026                                                                                                                                  |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                     |
-| **Relacionado con** | ADR 0018 (Apalis — Jobs asíncronos), ADR 0002 (Config), ADR 0010 (Testing), ADR 0011 (Ciclo Lab→Puente→Producción), ADR 0035 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0015 (Apalis — Jobs asíncronos), ADR 0002 (Config), ADR 0010 (Testing), ADR 0011 (Ciclo Lab→Puente→Producción), ADR 0020 (Monitoreo Regional) |
 
 ---
 
@@ -19,7 +19,7 @@ El sistema necesita enviar correos transaccionales para:
 * Confirmaciones de registro
 * Posibles futuras alertas SNMP/email
 
-El ADR 0018 define `EmailJob` como job asíncrono, pero no define:
+El ADR 0015 define `EmailJob` como job asíncrono, pero no define:
 
 * proveedor de envío
 * estrategia de templates
@@ -310,7 +310,7 @@ apps/mailer/dist/
 
 ---
 
-# Integración con Apalis (ADR 0018)
+# Integración con Apalis (ADR 0015)
 
 ```rust
 // apps/api/src/jobs/email_job.rs

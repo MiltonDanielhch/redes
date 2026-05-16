@@ -1,11 +1,11 @@
-# ADR 0035 — Módulo de Monitoreo de Infraestructura Regional
+# ADR 0020 — Módulo de Monitoreo de Infraestructura Regional
 
 | Campo               | Valor                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                                                             |
 | **Fecha**           | 2026                                                                                                                                                   |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                       |
-| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0003 (Axum), ADR 0022 (SvelteKit + Svelte 5), ADR 0024 (Local-First), ADR 0027 (ConnectRPC), ADR 0018 (Jobs + Apalis) |
+| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0003 (Axum), ADR 0017 (SvelteKit + ConnectRPC), ADR 0015 (Jobs + Apalis) |
 
 ---
 
@@ -194,7 +194,7 @@ Visualizar gráficamente las conexiones físicas y lógicas.
 
 Por defecto:
 
-* SSE (ADR 0022)
+* SSE (ADR 0017)
 * polling adaptativo
 * WebSocket solo si realmente es necesario
 
@@ -365,8 +365,6 @@ Dashboard actualiza gráficos
 ---
 
 # Estrategia offline
-
-Integración directa con ADR 0024:
 
 * SQLite Wasm local
 * sync queue

@@ -4,7 +4,7 @@
 > - Backend Bloques I, II, III completados
 > - Frontend FE.I, FE.II, FE.III completados
 >
-> **ADRs:** 0035 · 0001 · 0003 · 0006 · 0007 · 0008 · 0021 · 0022
+> **ADRs:** 0020 · 0001 · 0003 · 0006 · 0007 · 0008 · 0016 · 0017
 
 ---
 
@@ -226,4 +226,4 @@ curl -X POST http://localhost:8080/api/v1/devices \
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0035 (Monitoreo de Infraestructura Regional) para la Gobernación del Beni.
+**Nota:** Este roadmap está basado en el ADR 0020 (Monitoreo de Infraestructura Regional) para la Gobernación del Beni.
