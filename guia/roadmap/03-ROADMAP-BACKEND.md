@@ -256,14 +256,15 @@
 [x] Async write a PostgreSQL (no bloquear request)
 ```
 
-### III.4 — Rate Limiting ⚠️
+### III.4 — Rate Limiting ✅
 
 > **Referencia:** ADR 0009
 
 ```
-[ ] RateLimitMiddleware con sliding window
-[ ] Límites: 100 req/min global, 10 req/min para auth
-[ ] Headers: X-RateLimit-Limit, X-RateLimit-Remaining
+[x] RateLimitMiddleware con sliding window
+[x] Límites: 100 req/min global, 10 req/min para auth
+[x] Headers: X-RateLimit-Limit, X-RateLimit-Remaining
+[x] RateLimiter con cleanup automático
 ```
 
 ---
