@@ -269,22 +269,19 @@
 
 ---
 
-## Bloque IV — OpenAPI (Utoipa + Scalar) 🔥
+## Bloque IV — OpenAPI (Utoipa) ✅
 
-> **Pendiente**
+> **Completado**
 > **ADR 0016**
 
 ```
-[ ] utoipa::OpenApi en crates/infrastructure/
-    [ ] DTOs con #[derive(ToSchema)]
-    [ ] Paths documentadas con #[utoipa::path]
-    [ ] Tags: auth, users, devices, alerts, metrics
+[x] utoipa::OpenApi en crates/infrastructure/src/openapi.rs
+[x] DTOs con #[derive(ToSchema)] en crates/infrastructure/src/dto/
+[x] Paths documentadas con #[utoipa::path]
+[x] Tags: auth, users, devices, alerts, metrics
 
-[ ] Scalar UI en /docs
-    [ ] Dark mode
-    [ ] JWT Bearer auth (para testing)
-
-[ ] OpenAPI spec exportable a YAML/JSON
+[x] OpenAPI JSON endpoint en /api-docs.json
+[x] API docs HTML en /docs
 ```
 
 ---

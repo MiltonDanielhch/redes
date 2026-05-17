@@ -5,6 +5,7 @@
 //! ADRs relacionados: 0003 (Axum), 0007
 
 use axum::{
+    http::StatusCode,
     response::IntoResponse,
     Json,
 };
@@ -17,17 +18,6 @@ pub struct ApiErrorResponse {
     pub error: String,
     #[schema(example = "The requested item does not exist", nullable = true)]
     pub details: Option<String>,
-}
-
-impl IntoResponse for ApiErrorResponse {
-    fn into_response(self) -> axum::response::Response {
-        let body = Json(json!({
-            "error": self.error,
-            "details": self.details,
-        }));
-
-        (axum::http::StatusCode::INTERNAL_SERVER_ERROR, body).into_response()
-    }
 }
 
 impl ApiErrorResponse {
@@ -52,10 +42,45 @@ impl ApiErrorResponse {
         }
     }
 
-    pub fn bad_request(message: &str) -> Self {
+    pub fn bad_request(msg: &str) -> Self {
         Self {
-            error: message.to_string(),
-            details: None,
+            error: "Bad request".to_string(),
+            details: Some(msg.to_string()),
         }
+    }
+
+    pub fn internal_error(msg: impl Into<String>) -> Self {
+        Self {
+            error: "Internal server error".to_string(),
+            details: Some(msg.into()),
+        }
+    }
+
+    pub fn unauthorized(msg: &str) -> Self {
+        Self {
+            error: "Unauthorized".to_string(),
+            details: Some(msg.to_string()),
+        }
+    }
+
+    pub fn forbidden(msg: &str) -> Self {
+        Self {
+            error: "Forbidden".to_string(),
+            details: Some(msg.to_string()),
+        }
+    }
+
+    pub fn into_response_with_status(self, status: StatusCode) -> axum::response::Response {
+        let body = Json(json!({
+            "error": self.error,
+            "details": self.details,
+        }));
+        (status, body).into_response()
+    }
+}
+
+impl IntoResponse for ApiErrorResponse {
+    fn into_response(self) -> axum::response::Response {
+        self.into_response_with_status(StatusCode::INTERNAL_SERVER_ERROR)
     }
 }

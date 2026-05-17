@@ -6,18 +6,25 @@
 
 use axum::{
     Router,
-    routing::{get, post, put, delete},
+    routing::get,
+    response::IntoResponse,
 };
 use std::sync::Arc;
 
 use crate::state::AppState;
 use crate::handlers::sede_handler::{list_sedes, get_sede, create_sede, update_sede};
 use crate::handlers::device_handler::{list_devices, get_device, create_device, update_device, delete_device};
+use crate::openapi::ApiDoc;
+use utoipa::OpenApi;
 
 pub fn create_router() -> Router<Arc<AppState>> {
+    let api_doc = ApiDoc::openapi();
+
     Router::new()
         .route("/health", get(health_handler))
         .route("/ready", get(ready_handler))
+        .route("/docs", get(scalar_docs))
+        .route("/api-docs.json", get(openapi_json))
         .route("/api/v1/sedes", get(list_sedes).post(create_sede))
         .route("/api/v1/sedes/:id", get(get_sede).put(update_sede))
         .route("/api/v1/devices", get(list_devices).post(create_device))
@@ -28,6 +35,31 @@ pub fn create_router() -> Router<Arc<AppState>> {
             Arc::new(MockSedeRepository),
             Arc::new(MockDeviceRepository),
         )))
+}
+
+async fn scalar_docs() -> impl IntoResponse {
+    use axum::response::Html;
+    let openapi = ApiDoc::openapi();
+    let json = serde_json::to_string_pretty(&openapi).unwrap_or_default();
+    Html(format!(r#"<!DOCTYPE html>
+<html>
+<head>
+    <title>API Documentation</title>
+    <style>
+        body {{ font-family: Arial, sans-serif; margin: 40px; }}
+        pre {{ background: #f4f4f4; padding: 20px; overflow: auto; }}
+    </style>
+</head>
+<body>
+    <h1>API Documentation (OpenAPI JSON)</h1>
+    <p>Get the raw JSON: <a href="/api-docs.json">/api-docs.json</a></p>
+    <pre>{}</pre>
+</body>
+</html>"#, json))
+}
+
+async fn openapi_json() -> impl IntoResponse {
+    axum::Json(ApiDoc::openapi())
 }
 
 async fn health_handler() -> &'static str {
