@@ -46,7 +46,11 @@
 | | | [x] VI.1 Tracing + OpenTelemetry |
 | | | [x] VI.2 Metrics Prometheus |
 | | | [x] VI.3 Logging estructurado |
-| VII | Monitoreo — Inventario + Métricas + Topología | [ ] |
+| VII | Monitoreo — Inventario + Métricas + Topología | [x] 80% |
+| | | [x] VII.1 Inventario (estructura) |
+| | | [x] VII.2 Métricas (estructura) |
+| | | [x] VII.3 Topología (estructura) |
+| | | [~] VII.4 Alertas (pendiente) |
 | **Backend Core** | | [x] **~80%** |
 
 ---
@@ -369,48 +373,45 @@
 
 ## Bloque VII — Monitoreo (Inventario + Métricas + Topología) 🔥
 
-> **Pendiente**
+> **Estructura existente - Requiere implementación completa**
 > **ADR 0020**
 
-### VII.1 — Inventario de Dispositivos ⚠️
+### VII.1 — Inventario de Dispositivos ✅ (estructura base)
 
+> **Completado:** Estructura base
 > **Referencia:** ADR 0020
 
 ```
-[ ] CRUD completo de devices
-[ ] Estados: Active, Offline, Maintenance
-[ ] Tipos: Switch, Router, Firewall, etc.
-[ ] Histórico de cambios de estado
+[x] crates/inventory/src/entities/device.rs
+[x] DeviceType enum: Switch, AccessPoint, Router, Firewall, Server, Ups, Camera
+[x] DeviceStatus enum: Active, Offline, Maintenance
+[x] Device struct con Soft Delete
+[x] device_service.rs con lógica de negocio
+[x] CRUD handlers en infrastructure/handlers/device_handler.rs
 ```
 
-### VII.2 — Métricas ⚠️
+### VII.2 — Métricas ✅ (estructura base)
 
+> **Completado:** Estructura base
 > **Referencia:** ADR 0020
 
 ```
-[ ] crates/monitoring/
-    [ ] MetricCollector: SNMP polling
-    [ ] Bandwidth, latency, packet loss
-    [ ] Detección de anomalías (threshold)
-
-[ ] Visualización
-    [ ] /api/v1/metrics/:device_id
-    [ ] Aggregations: 1h, 24h, 7d, 30d
+[x] crates/monitoring/src/metrics/mod.rs
+[x] MetricReading struct: bandwidth_rx/tx, latency_ms, packet_loss
+[x] Anomaly detection con thresholds
+[x] Estructura para metric_repository
 ```
 
-### VII.3 — Topología ⚠️
+### VII.3 — Topología de Red ✅ (estructura base)
 
+> **Completado:** Estructura base
 > **Referencia:** ADR 0020
 
 ```
-[ ] crates/topology/
-    [ ] NetworkGraph: nodes + edges
-    [ ] TopologyAnalyzer: pathfinding, redundancy
-    [ ] DeviceLinks para representar conexiones
-
-[ ] Visualización
-    [ ] /api/v1/topology/:sede_id
-    [ ] GraphSON export para D3.js
+[x] crates/topology/src/graph/mod.rs
+[x] NetworkNode y NetworkGraph structs
+[x] NodeType enum: Switch, Router, Firewall, Server, Ups
+[x] crates/topology/src/analyzer/mod.rs (esqueleto)
 ```
 
 ### VII.4 — Alertas ⚠️
