@@ -1,0 +1,19 @@
+# Ubicación: `crates/email/Cargo.toml`
+#
+# Descripción: Cliente de email con Resend y cola async.
+#
+# ADRs relacionados: 0014 (Notificaciones email)
+
+[package]
+name = "email"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+reqwest = { workspace = true }
+tokio = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
