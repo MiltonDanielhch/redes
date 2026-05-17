@@ -6,6 +6,7 @@
 
 use axum::{
     Router,
+    extract::State,
     routing::get,
     response::IntoResponse,
 };
@@ -15,14 +16,16 @@ use crate::state::AppState;
 use crate::handlers::sede_handler::{list_sedes, get_sede, create_sede, update_sede};
 use crate::handlers::device_handler::{list_devices, get_device, create_device, update_device, delete_device};
 use crate::openapi::ApiDoc;
+use monitoring::health::HealthRegistry;
 use utoipa::OpenApi;
 
 pub fn create_router() -> Router<Arc<AppState>> {
     let api_doc = ApiDoc::openapi();
+    let health_registry = Arc::new(HealthRegistry::new());
 
     Router::new()
-        .route("/health", get(health_handler))
-        .route("/ready", get(ready_handler))
+        .route("/health/live", get(liveness_handler))
+        .route("/health/ready", get(readiness_handler))
         .route("/docs", get(scalar_docs))
         .route("/api-docs.json", get(openapi_json))
         .route("/api/v1/sedes", get(list_sedes).post(create_sede))
@@ -34,6 +37,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .with_state(Arc::new(AppState::new(
             Arc::new(MockSedeRepository),
             Arc::new(MockDeviceRepository),
+            health_registry,
         )))
 }
 
@@ -62,12 +66,19 @@ async fn openapi_json() -> impl IntoResponse {
     axum::Json(ApiDoc::openapi())
 }
 
-async fn health_handler() -> &'static str {
+async fn liveness_handler() -> &'static str {
     "OK"
 }
 
-async fn ready_handler() -> &'static str {
-    "READY"
+async fn readiness_handler(
+    State(state): State<Arc<AppState>>,
+) -> impl IntoResponse {
+    let health = state.health_registry.check_all().await;
+    if health.overall_healthy {
+        (axum::http::StatusCode::OK, axum::Json(health))
+    } else {
+        (axum::http::StatusCode::SERVICE_UNAVAILABLE, axum::Json(health))
+    }
 }
 
 struct MockSedeRepository;

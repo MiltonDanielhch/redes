@@ -5,20 +5,24 @@
 //! ADRs relacionados: 0003 (Axum)
 
 use std::sync::Arc;
+use monitoring::health::HealthRegistry;
 
 pub struct AppState {
     pub sede_repository: Arc<dyn domain::ports::SedeRepository>,
     pub device_repository: Arc<dyn domain::ports::DeviceRepository>,
+    pub health_registry: Arc<HealthRegistry>,
 }
 
 impl AppState {
     pub fn new(
         sede_repository: Arc<dyn domain::ports::SedeRepository>,
         device_repository: Arc<dyn domain::ports::DeviceRepository>,
+        health_registry: Arc<HealthRegistry>,
     ) -> Self {
         Self {
             sede_repository,
             device_repository,
+            health_registry,
         }
     }
 }

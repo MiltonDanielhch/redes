@@ -15,4 +15,7 @@ uuid = { workspace = true }
 time = { workspace = true }
 serde = { workspace = true }
 reqwest = { workspace = true }
+sqlx = { workspace = true }
 tracing = { workspace = true }
+tokio = { workspace = true }
+async-trait = { workspace = true }
