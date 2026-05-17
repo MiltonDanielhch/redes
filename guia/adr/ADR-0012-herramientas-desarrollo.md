@@ -1,15 +1,16 @@
-# ADR 0012 — Herramientas: just + pnpm + lefthook
+# ADR 0012 — Herramientas: mise + just + pnpm + lefthook
 
 | Campo               | Valor                                                                                                    |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                                               |
-| **Fecha**           | 2026-05-15                                                                                               |
+| **Fecha**           | 2026-05-16                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                         |
-| **Relacionado con** | ADR 0010 (Testing), ADR 0011 (Estándares de Desarrollo), ADR 0013 (Deploy), ADR 0016 (OpenAPI) |
+| **Relacionado con** | ADR 0010 (Testing), ADR 0011 (Estándares de Desarrollo), ADR 0013 (Deploy), ADR 0016 (OpenAPI), ADR 0019 (Coolify) |
+| **Última revisión** | 2026-05-16 — Alineación con mise + pnpm 11 + Coolify |
 
 ---
 
-# Contexto
+## Contexto
 
 Sin un estándar de tooling:
 
@@ -36,19 +37,55 @@ El objetivo es tener:
 
 ---
 
-# Decisión
+## Decisión
 
 Se adopan oficialmente:
 
-| Herramienta | Rol                               |
-| ----------- | --------------------------------- |
-| `just`      | Task runner universal             |
-| `pnpm`      | Gestión de paquetes JS            |
-| `lefthook`  | Git hooks rápidos y reproducibles |
+| Herramienta | Rol | Versión mínima |
+| ----------- | --------------------------------- | --------------- |
+| `mise` | Gestor de toolchains (Rust, Node, pnpm, just) | 2026.x |
+| `just` | Task runner universal | 1.40 |
+| `pnpm` | Gestión de paquetes JS | 11.0 |
+| `lefthook` | Git hooks rápidos y reproducibles | 2.1.6 |
 
 ---
 
-# 1 — just como task runner oficial
+## 0 — mise: gestor de toolchains
+
+`mise` (anteriormente `rtx`) es el gestor de versiones oficial del proyecto. Centraliza:
+
+- Rust toolchain
+- Node.js
+- pnpm
+- just
+
+### Configuración (`mise.toml`)
+
+```toml
+[tools]
+rust = "1.86"
+node = "24"
+pnpm = "11"
+just = "1.40"
+
+[env]
+RUST_LOG = "info"
+DATABASE_URL = "postgres://user:pass@localhost:5432/redes"
+```
+
+### Instalación
+
+```bash
+# macOS/Linux
+curl https://mise.run | sh
+
+# Activar shell
+echo 'eval "$(~/.local/bin/mise activate)"' >> ~/.bashrc
+```
+
+---
+
+## 1 — just como task runner oficial
 
 ## Razón principal
 
@@ -86,13 +123,13 @@ Se adopan oficialmente:
 
 ---
 
-# 2 — Filosofía del tooling
+## 2 — Filosofía del tooling
 
 ## Un comando = una intención clara
 
 Ejemplo:
 
-```bash id="m4p61j"
+```bash
 just dev
 just test
 just deploy
@@ -101,18 +138,17 @@ just rollback
 
 No:
 
-```bash id="7c0c20"
+```bash
 cargo run --bin api --features local
 ```
 
 ---
 
-# 3 — justfile oficial
+## 3 — justfile oficial
 
 ```makefile
 # justfile
-# Mostrar comandos:
-# just --list
+# Mostrar comandos: just --list
 
 set dotenv-load := true
 
@@ -121,21 +157,25 @@ set dotenv-load := true
 # ─────────────────────────────────────────────────────────────────────────────
 
 setup:
-    cargo install cargo-watch cargo-nextest cargo-deny cargo-audit sqlx-cli
-    cargo install bacon
-    cargo install cargo-edit
-    cargo install typos-cli
-    cargo install just
-    cargo install lefthook
+    # Verificar mise está activo
+    mise doctor
 
-    npm install -g pnpm
+    # Instalar dependencias Rust
+    cargo install cargo-nextest cargo-deny cargo-audit sqlx-cli --locked
+    cargo install bacon --locked
+    cargo install typos-cli --locked
 
+    # Instalar lefthook (no via cargo — usa el binario oficial)
+    npm install -g lefthook@2.1.6
+
+    # Instalar dependencias JS
     pnpm install
 
+    # Configurar entorno
     cp -n .env.example .env.local || true
-
     lefthook install
 
+    # Base de datos
     sqlx database create
     just migrate
 
@@ -148,16 +188,14 @@ setup:
 # ─────────────────────────────────────────────────────────────────────────────
 
 dev:
-    cargo watch -x "run --bin api" & pnpm --filter web dev
+    # Backend + Frontend en paralelo
+    bacon & pnpm --filter web dev
 
 dev-api:
-    cargo watch -x "run --bin api"
+    bacon
 
 dev-web:
     pnpm --filter web dev
-
-watch:
-    bacon
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Calidad
@@ -192,10 +230,13 @@ quality:
 # ─────────────────────────────────────────────────────────────────────────────
 
 test:
-    cargo nextest run
+    cargo nextest run --profile default -E 'not test(e2e)'
+
+test-e2e:
+    cargo nextest run --profile e2e -E 'test(e2e)'
 
 test-all:
-    cargo nextest run --all-targets
+    cargo nextest run --profile ci
 
 test-v:
     cargo nextest run --no-capture
@@ -223,15 +264,18 @@ prepare:
     cargo sqlx prepare --workspace
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Tipos TypeScript
+# Tipos TypeScript (OpenAPI → TS)
 # ─────────────────────────────────────────────────────────────────────────────
 
 types:
-    buf generate
+    # Generar tipos desde OpenAPI del backend corriendo
+    # Requiere backend en localhost:8080
+    curl -s http://localhost:8080/openapi.json > /tmp/openapi.json
+    openapi-typescript /tmp/openapi.json --output apps/web/src/lib/generated/api-types.ts
 
 types-check:
-    buf generate
-    git diff --exit-code apps/web/src/lib/types/api.ts
+    just types
+    git diff --exit-code apps/web/src/lib/generated/api-types.ts
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Build
@@ -241,26 +285,25 @@ build:
     cargo build --release
     pnpm --filter web build
 
+build-agent:
+    cargo build --release --bin agent --profile release-size
+
 # ─────────────────────────────────────────────────────────────────────────────
-# Deploy
+# Deploy (Coolify)
 # ─────────────────────────────────────────────────────────────────────────────
 
 deploy:
     just quality
-    just test
-    kamal deploy
-
-rollback:
-    kamal rollback
-
-redeploy:
-    kamal redeploy
+    just test-all
+    just build
+    # Push a Coolify (vía webhook o CLI)
+    @echo "🚀 Deploy a Coolify — usar dashboard o webhook"
 
 logs:
-    kamal logs -f
+    @echo "Ver logs en Coolify dashboard"
 
 status:
-    kamal details
+    @echo "Ver estado en Coolify dashboard"
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Utilidades
@@ -273,42 +316,59 @@ clean:
 
 ---
 
-# 4 — pnpm como package manager oficial
+## 4 — pnpm como package manager oficial
 
 ## Razón
 
 `pnpm`:
 
-* usa menos disco
+* usa menos disco (hardlinks)
 * es más rápido
 * tiene workspaces reales
 * evita duplicación masiva de node_modules
+* supply-chain protection por defecto (pnpm 11)
 
 ---
 
-# Workspace oficial
+## Workspace oficial
 
 ```yaml
 # pnpm-workspace.yaml
 packages:
   - "apps/web"
-  - "apps/mailer"
+
+# pnpm 11: configuración en pnpm-workspace.yaml, no .npmrc
 ```
 
 ---
 
-# Beneficios
+## package.json (apps/web)
 
-| Beneficio          | Resultado            |
-| ------------------ | -------------------- |
-| hardlinks          | menos espacio        |
-| instalación rápida | CI más rápido        |
-| workspaces reales  | monorepo limpio      |
-| lockfile único     | builds reproducibles |
+```json
+{
+  "name": "@redes/web",
+  "packageManager": "pnpm@11.0.0",
+  "engines": {
+    "node": ">=24.0.0"
+  }
+}
+```
 
 ---
 
-# 5 — lefthook como enforcement local
+## Beneficios
+
+| Beneficio | Resultado |
+| ------------------ | -------------------- |
+| hardlinks | menos espacio |
+| instalación rápida | CI más rápido |
+| workspaces reales | monorepo limpio |
+| lockfile único | builds reproducibles |
+| isolated globals | sin conflictos entre paquetes globales |
+
+---
+
+## 5 — lefthook como enforcement local
 
 ## Filosofía
 
@@ -320,12 +380,13 @@ Los hooks garantizan:
 * compilación válida
 * lint limpio
 * tests mínimos
+* seguridad (cargo-deny)
 
 ANTES de llegar al repositorio.
 
 ---
 
-# Configuración oficial
+## Configuración oficial
 
 ```yaml
 # lefthook.yml
@@ -333,7 +394,6 @@ ANTES de llegar al repositorio.
 pre-commit:
   parallel: true
   commands:
-
     fmt-rust:
       glob: "*.rs"
       run: cargo fmt --all --check
@@ -346,12 +406,11 @@ pre-commit:
 
 pre-push:
   commands:
-
     lint:
       run: cargo clippy --all-targets -- -D warnings
 
     test:
-      run: cargo nextest run
+      run: cargo nextest run --profile default -E 'not test(e2e)'
 
     audit:
       run: cargo deny check
@@ -359,27 +418,28 @@ pre-push:
 
 ---
 
-# Instalación
+## Instalación
 
-```bash id="icd7gk"
+```bash
 lefthook install
 ```
 
 Incluido automáticamente en:
 
-```bash id="u0lzlf"
+```bash
 just setup
 ```
 
 ---
 
-# 6 — Filosofía de onboarding
+## 6 — Filosofía de onboarding
 
 Un developer nuevo debe poder hacer:
 
-```bash id="8xxmbj"
+```bash
 git clone ...
 cd proyecto
+mise install      # instala Rust, Node, pnpm, just
 just setup
 just dev
 ```
@@ -388,11 +448,11 @@ sin leer documentación extensa.
 
 ---
 
-# Resultado esperado
+## Resultado esperado
 
 En menos de 5 minutos:
 
-* entorno listo
+* entorno listo (via mise)
 * DB creada
 * migraciones aplicadas
 * hooks instalados
@@ -401,7 +461,7 @@ En menos de 5 minutos:
 
 ---
 
-# 7 — Integración con IA
+## 7 — Integración con IA
 
 El tooling está diseñado para:
 
@@ -416,7 +476,7 @@ El tooling está diseñado para:
 
 Una IA puede inferir workflows fácilmente:
 
-```bash id="uf7mzd"
+```bash
 just test
 just lint
 just deploy
@@ -426,7 +486,7 @@ sin conocimiento humano adicional.
 
 ---
 
-# 8 — Política de CI
+## 8 — Política de CI
 
 El CI debe ejecutar exactamente los mismos comandos locales.
 
@@ -436,51 +496,53 @@ El CI debe ejecutar exactamente los mismos comandos locales.
 
 Nunca tener:
 
-* comandos “especiales” del CI
+* comandos "especiales" del CI
 * pasos distintos entre local y GitHub Actions
 
 ---
 
 ## Principio
 
-> “Local = CI = Producción”
+> "Local = CI = Producción"
 
 ---
 
-# Alternativas consideradas
+## Alternativas consideradas
 
-| Herramienta         | Motivo de descarte        |
+| Herramienta | Motivo de descarte |
 | ------------------- | ------------------------- |
-| Makefile            | sintaxis antigua y frágil |
-| npm scripts         | limitado a JS             |
-| Taskfile            | dependencia adicional     |
-| husky               | muy centrado en Node      |
-| pre-commit (Python) | stack extra innecesario   |
+| Makefile | sintaxis antigua y frágil |
+| npm scripts | limitado a JS |
+| Taskfile | dependencia adicional |
+| husky | muy centrado en Node |
+| pre-commit (Python) | stack extra innecesario |
+| asdf / nvm | reemplazados por mise |
 
 ---
 
-# Herramientas y Librerías Recomendadas (Edición 2026)
+## Herramientas y Librerías Recomendadas (Edición 2026)
 
-| Herramienta      | Propósito              |
-| ---------------- | ---------------------- |
-| `mise`           | gestión de toolchains  |
-| `bacon`          | feedback loop          |
-| `cargo-nextest`  | tests paralelos        |
-| `cargo-deny`     | auditoría supply-chain |
-| `cargo-audit`    | CVEs                   |
-| `typos`          | calidad textual        |
-| `cargo-dist`     | releases               |
-| `cargo-llvm-cov` | cobertura              |
-| `sqlx-cli`       | migraciones            |
-| `buf`            | generación tipos       |
+| Herramienta | Propósito | Versión | Estado |
+| ---------------- | ---------------------- | -------- | ------ |
+| `mise` | gestión de toolchains | 2026.x | ✅ Activa |
+| `just` | task runner | 1.40 | ✅ Activa |
+| `pnpm` | package manager JS | 11.0 | ✅ Activa |
+| `lefthook` | git hooks | 2.1.6 | ✅ Activa |
+| `bacon` | feedback loop | 3.22.0 | ✅ Activa |
+| `cargo-nextest` | tests paralelos | 0.9.135 | ✅ Activa |
+| `cargo-deny` | auditoría supply-chain | 0.18 | ✅ Activa |
+| `cargo-audit` | CVEs | 0.21 | ✅ Activa |
+| `typos` | calidad textual | 1.46.1 | ✅ Activa |
+| `sqlx-cli` | migraciones | 0.8 | ✅ Activa |
+| `openapi-typescript` | tipos TS desde OpenAPI | latest | ✅ Activa |
 
 ---
 
-# Consecuencias
+## Consecuencias
 
-## ✅ Positivas
+### ✅ Positivas
 
-* Onboarding extremadamente rápido
+* Onboarding extremadamente rápido (mise + just)
 * Comandos consistentes
 * Calidad automatizada
 * Menos errores humanos
@@ -488,59 +550,48 @@ Nunca tener:
 * Mejor colaboración humano + IA
 * CI más simple
 
----
+### ⚠️ Negativas / Trade-offs
 
-## ⚠️ Negativas / Trade-offs
-
-### Más herramientas instaladas
+**Más herramientas instaladas**
 
 Requiere:
-
-* Rust toolchain
-* Node
-* pnpm
-* just
+* mise (Rust, Node, pnpm, just)
 * lefthook
 
 Mitigación:
-
-```bash id="ey5d4j"
+```bash
 just setup
 ```
-
 automatiza todo.
 
----
-
-### Hooks pueden sentirse lentos
+**Hooks pueden sentirse lentos**
 
 Mitigación:
-
 * `nextest`
 * paralelismo
 * capas rápidas de tests
 
----
+**Developers pueden saltarse hooks**
 
-### Developers pueden saltarse hooks
-
-```bash id="p9c4hz"
+```bash
 LEFTHOOK=0 git push
 ```
 
 Mitigación:
-
 * CI vuelve a validar todo
 * bypass queda visible en historial
 
 ---
 
-# Decisiones derivadas
+## Decisiones derivadas
 
+* `mise` es el gestor de toolchains oficial (reemplaza asdf/nvm)
 * `just` es el entrypoint oficial del proyecto
 * Todo workflow recurrente debe vivir en `justfile`
-* `pnpm` es obligatorio — no usar npm/yarn
+* `pnpm` 11 es obligatorio — no usar npm/yarn/pnpm 10
 * `lefthook install` forma parte de `just setup`
-* `just deploy` ejecuta validaciones antes de desplegar
+* `just deploy` ejecuta validaciones antes de desplegar (Coolify)
 * El CI ejecuta exactamente los mismos comandos locales
 * El tooling prioriza simplicidad operacional sobre flexibilidad excesiva
+* `cargo-edit` eliminado (no se usa en el proyecto)
+* `cargo-watch` eliminado (reemplazado por `bacon`)

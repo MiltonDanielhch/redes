@@ -3,9 +3,10 @@
 | Campo               | Valor                                                                                                           |
 | ------------------- | --------------------------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                                                      |
-| **Fecha**           | 2026                                                                                                            |
+| **Fecha**           | 2026-05-16                                                                                                      |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                |
-| **Relacionado con** | ADR 0003 (Axum + Tower middleware), ADR 0008 (Auth — límites por endpoint), ADR 0015 (Monitoreo) |
+| **Relacionado con** | ADR 0003 (Axum + Tower middleware), ADR 0008 (Auth — límites por endpoint), ADR 0014 (Monitoreo) |
+| **Última revisión** | 2026-05-16 — Corrección de versiones + alineación con ROADMAP-AUTH |
 
 ---
 
@@ -28,31 +29,35 @@ Necesitamos una estrategia de rate limiting que:
 
 ---
 
-# Decisión
+## Decisión
 
 Usar **`tower-governor`** como middleware de rate limiting integrado con Axum y Tower.
 
 La estrategia se divide en:
 
-* límites estrictos para autenticación
-* límites anti-spam para endpoints públicos
-* límites generales para API autenticada
-* exclusión explícita de endpoints internos (`/health`, `/metrics`)
+* Límites estrictos para autenticación (por minuto, no por segundo)
+* Límites generales para API autenticada
+* Exclusión explícita de endpoints internos (`/health`, `/docs`, `/openapi.json`)
 
 ---
 
-# Dependencias
+## Dependencias
 
 ```toml
 # apps/api/Cargo.toml
 
-tower-governor = { version = "0.4", features = ["axum"] }
-axum-client-ip = "0.6"
+tower-governor = { version = "0.3", features = ["axum", "tracing"] }
+axum-client-ip = "1.3"
 ```
+
+**Notas de versión:**
+- `tower-governor 0.3.0` es la última estable disponible (mayo 2025). No existe versión 0.4.
+- `axum-client-ip 1.3.1` requiere Axum 0.7+. Compatible con Axum 0.8 del proyecto.
+- En `axum-client-ip 1.x`, `SecureClientIp` se renombró a `ClientIp` y `SecureClientIpSource` a `ClientIpSource`.
 
 ---
 
-# Arquitectura del Rate Limiting
+## Arquitectura del Rate Limiting
 
 ```text
 Cliente
@@ -66,9 +71,9 @@ Caddy / Reverse Proxy
    ▼
 tower-governor
    │
-   ├── Auth Limits
-   ├── Leads Limits
-   └── API Limits
+   ├── Auth Limits (por minuto, burst bajo)
+   ├── API Limits (por segundo, burst alto)
+   └── Excluded routes
    │
    ▼
 Handlers Axum
@@ -76,134 +81,176 @@ Handlers Axum
 
 ---
 
-# Configuración de límites
+## Configuración de límites
 
-## 1 — Auth: protección contra fuerza bruta
+Alineada con ROADMAP-AUTH-FULLSTACK.md (A.9):
+
+### 1 — Auth: protección contra fuerza bruta
 
 Endpoints:
 
-* `/auth/login`
 * `/auth/register`
+* `/auth/login`
 * `/auth/refresh`
 * `/auth/forgot-password`
+* `/auth/reset-password`
 
-Configuración:
+Configuración (por minuto para evitar bloqueo de operadores legítimos):
 
 ```rust
-// apps/api/src/http/middleware/rate_limit.rs
+//! Ubicación: `apps/api/src/http/middleware/rate_limit.rs`
+//!
+//! Descripción: Configuraciones de rate limiting por categoría de endpoint.
+//!              Usa GCRA (Generic Cell Rate Algorithm) via tower-governor.
+//!
+//! ADRs: 0009, 0003, 0008
 
+use std::sync::Arc;
+use std::time::Duration;
 use tower_governor::{
-    governor::GovernorConfigBuilder,
+    governor::{GovernorConfig, GovernorConfigBuilder},
     key_extractor::SmartIpKeyExtractor,
     GovernorLayer,
 };
 
 /// Auth — protección anti fuerza bruta
-///
-/// 1 request/segundo
-/// burst de 5
-///
-/// Combinado con argon2id (~200ms)
-/// hace extremadamente costoso el ataque automatizado.
+/// 
+/// Límite: 10 requests / 60 segundos (equivale a ~1 cada 6s)
+/// Burst: 5 (permite ráfaga inicial pequeña)
+/// 
+/// Combinado con argon2id (~200ms) hace costoso el ataque automatizado.
 pub fn auth_rate_limit() -> GovernorLayer<SmartIpKeyExtractor, _> {
     let config = GovernorConfigBuilder::default()
-        .per_second(1)
+        .per_second(6)      // 1 cada 6 segundos = 10 por minuto
         .burst_size(5)
+        .use_headers()      // x-ratelimit-limit, x-ratelimit-remaining
         .finish()
         .expect("invalid auth rate limit config");
 
-    GovernorLayer::new(config)
+    GovernorLayer::new(Arc::new(config))
 }
-```
 
----
-
-## 2 — Leads: anti-spam de formularios
-
-```rust
-/// Leads — anti spam
-///
-/// Máximo 3 requests por minuto.
-pub fn leads_rate_limit() -> GovernorLayer<SmartIpKeyExtractor, _> {
+/// Auth register — más estricto
+/// 
+/// Límite: 5 requests / 15 minutos
+pub fn auth_register_rate_limit() -> GovernorLayer<SmartIpKeyExtractor, _> {
     let config = GovernorConfigBuilder::default()
-        .per_minute(3)
+        .per_second(180)    // 1 cada 180s = 5 por 15min
         .burst_size(3)
+        .use_headers()
         .finish()
-        .expect("invalid leads rate limit config");
+        .expect("invalid register rate limit config");
 
-    GovernorLayer::new(config)
+    GovernorLayer::new(Arc::new(config))
+}
+
+/// Auth forgot-password — muy estricto
+/// 
+/// Límite: 3 requests / 60 minutos
+pub fn auth_forgot_rate_limit() -> GovernorLayer<SmartIpKeyExtractor, _> {
+    let config = GovernorConfigBuilder::default()
+        .per_second(1200)   // 1 cada 1200s = 3 por hora
+        .burst_size(2)
+        .use_headers()
+        .finish()
+        .expect("invalid forgot-password rate limit config");
+
+    GovernorLayer::new(Arc::new(config))
 }
 ```
 
 ---
 
-## 3 — API autenticada general
+### 2 — API autenticada general
 
 ```rust
-/// API general autenticada
-///
-/// Uso normal de dashboard, tablas y navegación.
+/// API general autenticada — uso normal de dashboard
+/// 
+/// Límite: 30 requests / 60 segundos (equivale a ~1 cada 2s)
+/// Burst: 20 (permite carga inicial de página)
 pub fn api_rate_limit() -> GovernorLayer<SmartIpKeyExtractor, _> {
     let config = GovernorConfigBuilder::default()
-        .per_second(10)
-        .burst_size(30)
+        .per_second(2)      // 1 cada 2 segundos = 30 por minuto
+        .burst_size(20)
+        .use_headers()
         .finish()
         .expect("invalid api rate limit config");
 
-    GovernorLayer::new(config)
+    GovernorLayer::new(Arc::new(config))
 }
 ```
 
 ---
 
-# Integración en Axum
+## Integración en Axum
 
 ```rust
-// apps/api/src/router.rs
+//! Ubicación: `apps/api/src/router.rs`
+//!
+//! Descripción: Router Axum con rate limiting aplicado por grupo de rutas.
+//!
+//! ADRs: 0003, 0009
+
+use axum::{
+    routing::{get, post},
+    Router,
+};
+use axum_client_ip::ClientIpSource;
 
 pub fn build_router(state: AppState) -> Router {
-    // Auth
+    // Auth — límites estrictos
     let auth_routes = Router::new()
-        .route("/auth/login", post(login_handler))
         .route("/auth/register", post(register_handler))
+        .layer(auth_register_rate_limit())
+        .route("/auth/login", post(login_handler))
         .route("/auth/refresh", post(refresh_handler))
         .route("/auth/forgot-password", post(forgot_password_handler))
+        .route("/auth/reset-password", post(reset_password_handler))
         .layer(auth_rate_limit());
 
-    // Leads
-    let leads_routes = Router::new()
-        .route("/api/v1/leads", post(capture_lead_handler))
-        .layer(leads_rate_limit());
-
-    // API autenticada
+    // API autenticada — límites generales
     let api_routes = Router::new()
-        .route("/api/v1/users", get(list_users).post(create_user))
-        .route("/api/v1/users/:id", get(get_user).put(update_user))
-        .route("/api/v1/roles", get(list_roles))
+        .route("/api/v1/sedes", get(list_sedes).post(create_sede))
+        .route("/api/v1/devices", get(list_devices).post(create_device))
+        .route("/api/v1/devices/:id", get(get_device).put(update_device))
+        .route("/api/v1/devices/:id/archive", put(archive_device))
+        .route("/api/v1/metrics", get(get_metrics).post(ingest_metrics))
+        .route("/api/v1/alerts", get(list_alerts))
+        .route("/api/v1/alerts/:id/acknowledge", post(acknowledge_alert))
+        .route("/api/v1/topology/:sede_id", get(get_topology))
+        .route("/api/v1/intrusions", get(list_intrusions))
+        .route("/api/v1/intrusions/:id/resolve", post(resolve_intrusion))
         .layer(auth_middleware)
         .layer(api_rate_limit());
 
+    // Excluidos explícitamente — sin rate limiting
+    let public_routes = Router::new()
+        .route("/health", get(health_handler))
+        .route("/docs", get(scalar_ui_handler))
+        .route("/openapi.json", get(openapi_json_handler));
+
     Router::new()
         .merge(auth_routes)
-        .merge(leads_routes)
         .merge(api_routes)
-
-        // Excluidos explícitamente
-        .route("/health", get(health_handler))
-        .route("/metrics", get(metrics_handler))
-
+        .merge(public_routes)
         .with_state(state)
+        .into_make_service_with_connect_info::<SocketAddr>()
 }
 ```
 
+**Nota:** `into_make_service_with_connect_info::<SocketAddr>()` es obligatorio para que `SmartIpKeyExtractor` funcione correctamente.
+
 ---
 
-# Respuesta HTTP al exceder el límite
+## Respuesta HTTP al exceder el límite
 
 ```http
 HTTP/1.1 429 Too Many Requests
 Content-Type: application/json
 Retry-After: 30
+x-ratelimit-limit: 10
+x-ratelimit-remaining: 0
+x-ratelimit-after: 30
 
 {
   "error": "too_many_requests",
@@ -214,85 +261,121 @@ Retry-After: 30
 
 ---
 
-# Tabla oficial de límites
+## Tabla oficial de límites
 
-| Endpoint        | Límite     | Burst | Objetivo          |
-| --------------- | ---------- | ----- | ----------------- |
-| `/auth/*`       | 1 req/s    | 5     | Anti fuerza bruta |
-| `/api/v1/leads` | 3 req/min  | 3     | Anti spam         |
-| API autenticada | 10 req/s   | 30    | Uso normal        |
-| `/health`       | Sin límite | —     | Healthchecks      |
-| `/metrics`      | Interno    | —     | Observabilidad    |
+| Endpoint | Límite | Burst | Objetivo |
+| --- | --- | --- | --- |
+| `/auth/register` | 5 / 15 min | 3 | Anti fuerza bruta |
+| `/auth/login` | 10 / 5 min | 5 | Anti fuerza bruta |
+| `/auth/forgot-password` | 3 / 60 min | 2 | Anti fuerza bruta |
+| `/auth/reset-password` | 5 / 15 min | 3 | Anti fuerza bruta |
+| `/auth/refresh` | 20 / 1 min | 10 | Uso legítimo alto |
+| API autenticada (`/api/v1/*`) | 30 / 60 s | 20 | Uso normal dashboard |
+| `/health` | Sin límite | — | Healthchecks |
+| `/docs`, `/openapi.json` | Sin límite | — | Documentación |
 
 ---
 
-# Integración con observabilidad
+## Integración con observabilidad
 
-Cada evento de rate limit se registra en tracing:
+Cada evento de rate limit se registra automáticamente via `tracing` (feature `tracing` habilitado):
 
 ```rust
 tracing::warn!(
     ip         = %client_ip,
     endpoint   = %req.uri(),
+    limit      = %config.burst_size,
     "rate limit exceeded"
 );
 ```
 
 Además:
 
-* `metrics` incrementa contador de respuestas `429`
-* Prometheus puede alertar picos anormales
-* Grafana puede visualizar ataques o spam en tiempo real
+* `tower-governor` envía headers `x-ratelimit-*` en cada respuesta (no solo 429)
+* Métricas internas pueden contar respuestas 429
+* Grafana/Healthchecks pueden alertar picos anormales
 
 ---
 
-# Extracción correcta de IP
+## Extracción correcta de IP
 
-Detrás de proxies reversos como Caddy o Nginx:
+Detrás de proxies reversos como Caddy:
 
 ```rust
-use axum_client_ip::SecureClientIpSource;
+use axum_client_ip::ClientIpSource;
 
-let ip_source = SecureClientIpSource::XRealIp;
+// En Caddyfile:
+// header_up X-Real-IP {remote_host}
+// header_up X-Forwarded-For {remote_host}
+
+let ip_source = ClientIpSource::XRealIp;
 ```
 
 Caddy debe reenviar:
 
 ```caddyfile
-header_up X-Real-IP {remote_host}
-header_up X-Forwarded-For {remote_host}
+reverse_proxy localhost:8080 {
+    header_up X-Real-IP {remote_host}
+    header_up X-Forwarded-For {remote_host}
+}
 ```
 
 ---
 
-# Alternativas consideradas
+## Cleanup de storage in-memory
 
-| Opción                 | Motivo de descarte                                |
-| ---------------------- | ------------------------------------------------- |
+`tower-governor` mantiene un HashMap en memoria que crece con cada IP nueva. Requiere limpieza periódica:
+
+```rust
+//! Ubicación: `apps/api/src/main.rs` (setup)
+//!
+//! Descripción: Background task para limpiar entries antiguos del rate limiter.
+
+use std::time::Duration;
+
+pub fn spawn_rate_limit_cleanup(config: &GovernorConfig) {
+    let limiter = config.limiter().clone();
+
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(Duration::from_secs(300)); // 5 min
+
+        loop {
+            interval.tick().await;
+            limiter.retain_recent();
+            tracing::info!("rate limiter storage cleaned: {} active entries", limiter.len());
+        }
+    });
+}
+```
+
+---
+
+## Alternativas consideradas
+
+| Opción | Motivo de descarte |
+| --- | --- |
 | Rate limiting en Caddy | Sin contexto de endpoints ni lógica de aplicación |
-| Redis + sliding window | Complejidad innecesaria para etapa inicial        |
-| Fail2ban               | Solo protege por IP, no por endpoint              |
-| Cloudflare Rate Limit  | Dependencia externa y costo adicional             |
-| Implementación manual  | Más compleja y propensa a errores                 |
+| Redis + sliding window | Complejidad innecesaria para etapa inicial |
+| Fail2ban | Solo protege por IP, no por endpoint |
+| Cloudflare Rate Limit | Dependencia externa y costo adicional |
+| Implementación manual | Más compleja y propensa a errores |
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+## Herramientas y Librerías
 
-| Herramienta                   | Propósito                              |
-| ----------------------------- | -------------------------------------- |
-| `axum-client-ip`              | Extrae IP real detrás de proxies       |
-| `governor`                    | Implementación GCRA eficiente          |
-| `metrics`                     | Monitoreo de eventos 429               |
-| `tower-http::CatchPanicLayer` | Evita caída del proceso ante panic     |
-| `tracing`                     | Auditoría y debugging                  |
-| `moka`                        | Cache futura para límites distribuidos |
+| Herramienta | Propósito | Versión |
+| --- | --- | --- |
+| `tower-governor` | Middleware GCRA para Tower/Axum | 0.3.0 |
+| `axum-client-ip` | Extracción segura de IP real | 1.3.1 |
+| `governor` | Algoritmo GCRA subyacente | (via tower-governor) |
+| `tracing` | Logging de eventos 429 | workspace |
 
 ---
 
-# Consecuencias
+## Consecuencias
 
-## ✅ Positivas
+### ✅ Positivas
 
 * Protección inmediata contra fuerza bruta
 * Bajo overhead — todo ocurre in-process
@@ -301,42 +384,32 @@ header_up X-Forwarded-For {remote_host}
 * Compatible con observabilidad moderna
 * Fácil evolución futura a Redis distribuido
 
----
+### ⚠️ Negativas / Trade-offs
 
-## ⚠️ Negativas / Trade-offs
-
-### Estado in-memory
-
+**Estado in-memory**
 El rate limit se reinicia cuando reinicia el proceso.
-
 → Aceptable en arquitectura monolítica inicial
 → Futuramente Redis puede centralizar el estado
 
----
-
-### Usuarios detrás de NAT
-
+**Usuarios detrás de NAT**
 Múltiples usuarios pueden compartir IP pública.
-
 → Ajustar `burst_size` según tráfico real
 → Confiar en `X-Real-IP` desde proxy seguro
 
----
-
-### Límites demasiado estrictos
-
+**Límites demasiado estrictos**
 Puede bloquear clientes legítimos.
-
 → Monitorear métricas `429`
 → Ajustar límites basados en comportamiento real
 
 ---
 
-# Decisiones derivadas
+## Decisiones derivadas
 
-* `/health` y `/metrics` quedan excluidos explícitamente
-* Caddy reenvía `X-Real-IP`
+* `/health`, `/docs`, `/openapi.json` quedan excluidos explícitamente
+* Caddy reenvía `X-Real-IP` y `X-Forwarded-For`
 * `argon2id` y rate limiting funcionan como defensa combinada
-* Los eventos `429` se registran en tracing y métricas
+* Los eventos `429` se registran en tracing
 * Fase futura multi-instancia: evaluar Redis distribuido
 * `tower-governor` es el estándar oficial del proyecto para control de tráfico
+* Headers `x-ratelimit-*` obligatorios en todas las respuestas (feature `use_headers`)
+* Cleanup de storage cada 5 minutos via background task

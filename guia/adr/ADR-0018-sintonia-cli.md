@@ -3,9 +3,10 @@
 | Campo               | Valor                                                                                                                                           |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado — implementación progresiva desde Fase 2                                                                                             |
-| **Fecha**           | 2026                                                                                                                                            |
+| **Fecha**           | 2026-05-16                                                                                                                                      |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                |
-| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0005 (Migraciones SQL), ADR 0006 (RBAC + Audit), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs) |
+| **Versión**         | 2.0 (Corrección 2026)                                                                                                                           |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0005 (Migraciones SQL), ADR 0006 (RBAC + Audit), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
 
@@ -68,18 +69,20 @@ La CLI se implementa **después de construir manualmente 3 módulos reales**.
 
 ---
 
-# Regla fundamental — “La regla de los 3 módulos”
+# Regla fundamental — "La regla de los 3 módulos"
 
 El sistema NO automatiza patrones que todavía no se comprenden completamente.
 
 ## Orden obligatorio
 
-| Módulo    | Forma de desarrollo | Objetivo                       |
-| --------- | ------------------- | ------------------------------ |
-| `user`    | Manual              | Definir patrón base            |
-| `project` | Manual              | Confirmar consistencia         |
-| `report`  | Manual              | Validar relaciones y RBAC      |
-| módulo 4+ | CLI                 | Automatizar patrón ya validado |
+| Módulo      | Forma de desarrollo | Objetivo                       |
+| ----------- | ------------------- | ------------------------------ |
+| `users`     | Manual              | Definir patrón base (auth)     |
+| `sedes`     | Manual              | Confirmar consistencia CRUD    |
+| `devices`   | Manual              | Validar relaciones y RBAC      |
+| módulo 4+   | CLI                 | Automatizar patrón ya validado |
+
+**Nota (2026):** Los 3 módulos iniciales corresponden al dominio de monitoreo regional (ADR 0020): `users` (RBAC base), `sedes` (entidad regional), `devices` (entidad con relaciones y métricas). No se usan módulos genéricos como `project` o `report` que no pertenecen al dominio del proyecto.
 
 La automatización viene después del entendimiento.
 
@@ -102,7 +105,8 @@ apps/cli/
     │       ├── module.rs
     │       ├── entity.rs
     │       ├── migration.rs
-    │       └── proto.rs
+    │       ├── openapi.rs
+    │       └── rbac.rs
     │
     ├── generators/
     │   ├── module.rs
@@ -112,9 +116,8 @@ apps/cli/
     │   ├── handler.rs
     │   ├── dto.rs
     │   ├── migration.rs
-    │   ├── proto.rs
-    │   ├── tests.rs
     │   ├── openapi.rs
+    │   ├── tests.rs
     │   └── rbac.rs
     │
     ├── templates/
@@ -124,7 +127,6 @@ apps/cli/
     │   ├── handler.rs.tera
     │   ├── dto.rs.tera
     │   ├── migration.sql.tera
-    │   ├── proto.proto.tera
     │   └── test.rs.tera
     │
     └── utils/
@@ -134,6 +136,8 @@ apps/cli/
         ├── module_registry.rs
         └── validation.rs
 ```
+
+**Nota (2026):** Se elimina `proto.rs` y `proto.proto.tera` del CLI. El proyecto utiliza REST + OpenAPI (ADR 0016), no ConnectRPC/gRPC. Se elimina `rpc/` del generador.
 
 ---
 
@@ -152,66 +156,76 @@ El CLI conoce:
 
 * RBAC
 * OpenAPI
-* ConnectRPC
 * Soft Delete
 * auditoría
 * naming
 * testing
 * estructura hexagonal
+* PASETO (no JWT)
+* SSE (no WebSocket por defecto)
+
+**No conoce:**
+
+* ConnectRPC / gRPC / Protobuf (el proyecto usa REST + OpenAPI)
+* JWT (prohibido por ADR 0008)
 
 ---
 
-# Lo que genera `sintonia g module acta`
+# Lo que genera `sintonia g module device`
 
 ```text
-crates/domain/src/entities/acta.rs
-crates/domain/src/ports/acta_repository.rs
+crates/domain/src/entities/device.rs
+crates/domain/src/ports/device_repository.rs
 
-crates/application/src/use_cases/
-  create_acta.rs
-  update_acta.rs
-  get_acta.rs
-  list_actas.rs
-  soft_delete_acta.rs
+crates/application/src/use_cases/devices/
+  create_device.rs
+  update_device.rs
+  get_device.rs
+  list_devices.rs
+  soft_delete_device.rs
+  update_device_status.rs
 
 crates/database/src/repositories/
-  sqlite_acta_repository.rs
-  cached_acta_repository.rs
+  device_repository.rs
+  cached_device_repository.rs
 
 crates/infrastructure/src/http/handlers/
-  acta_handler.rs
-  acta_dto.rs
+  device_handler.rs
+crates/infrastructure/src/http/dtos/
+  device_dto.rs
 
-crates/infrastructure/src/rpc/
-  acta_service.rs
-
-proto/acta/v1/acta.proto
-
-tests/integration/acta_api_test.rs
-tests/unit/create_acta_test.rs
+tests/integration/device_api_test.rs
+tests/unit/create_device_test.rs
 
 data/migrations/
-  20260515_create_actas.sql
+  20260515120000_create_devices.sql
 ```
+
+**Nota:** No se generan archivos `.proto` ni servicios RPC. El registro OpenAPI se realiza vía AST editing en `apps/api/src/docs.rs`.
 
 ---
 
 # Generación automática de RBAC
 
 ```sql
-INSERT OR IGNORE INTO permissions (id, name, description) VALUES
-('perm_acta_001', 'actas:read',   'Ver actas'),
-('perm_acta_002', 'actas:create', 'Crear actas'),
-('perm_acta_003', 'actas:update', 'Editar actas'),
-('perm_acta_004', 'actas:delete', 'Eliminar actas');
+INSERT INTO permissions (id, name, description) VALUES
+('perm_device_001', 'devices:read',   'Ver dispositivos'),
+('perm_device_002', 'devices:create', 'Crear dispositivos'),
+('perm_device_003', 'devices:update', 'Editar dispositivos'),
+('perm_device_004', 'devices:delete', 'Archivar dispositivos'),
+('perm_device_005', 'devices:export', 'Exportar dispositivos')
+ON CONFLICT (name) DO NOTHING;
 
-INSERT OR IGNORE INTO role_permissions (role_id, permission_id)
+INSERT INTO role_permissions (role_id, permission_id)
 SELECT r.id, p.id
 FROM roles r
 CROSS JOIN permissions p
 WHERE r.name = 'Admin'
-AND p.name LIKE 'actas:%';
+AND p.name LIKE 'devices:%'
+ON CONFLICT DO NOTHING;
 ```
+
+**Nota:** Se usa `ON CONFLICT` (PostgreSQL) en lugar de `INSERT OR IGNORE` (SQLite). El proyecto usa PostgreSQL (ADR 0004).
 
 ---
 
@@ -220,7 +234,7 @@ AND p.name LIKE 'actas:%';
 Toda entidad generada incluye:
 
 ```rust
-pub deleted_at: Option<DateTime<Utc>>,
+pub deleted_at: Option<OffsetDateTime>,
 ```
 
 Y las queries base:
@@ -232,7 +246,7 @@ WHERE deleted_at IS NULL
 El CLI prohíbe:
 
 ```sql
-DELETE FROM users
+DELETE FROM devices
 ```
 
 ---
@@ -242,15 +256,28 @@ DELETE FROM users
 Los handlers incluyen:
 
 ```rust
-#[utoipa::path]
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices",
+    responses(
+        (status = 200, description = "Lista de dispositivos", body = [DeviceDto]),
+        (status = 401, description = "No autenticado"),
+        (status = 403, description = "Sin permiso")
+    ),
+    security(("bearer_auth" = [])),
+    tag = "devices"
+)]
 ```
 
-Además, el CLI registra automáticamente:
+Además, el CLI registra automáticamente vía AST editing:
 
 ```rust
 paths(
-    acta_handler::create_acta,
-    acta_handler::list_actas,
+    device_handler::list_devices,
+    device_handler::create_device,
+    device_handler::get_device,
+    device_handler::update_device,
+    device_handler::archive_device,
 )
 ```
 
@@ -259,28 +286,6 @@ en:
 ```rust
 apps/api/src/docs.rs
 ```
-
----
-
-# Integración automática con ConnectRPC
-
-```protobuf
-service ActaService {
-    rpc CreateActa(CreateActaRequest)
-        returns (CreateActaResponse);
-
-    rpc ListActas(ListActasRequest)
-        returns (ListActasResponse);
-}
-```
-
-Después:
-
-```bash
-buf generate
-```
-
-Los tipos frontend/backend quedan sincronizados automáticamente.
 
 ---
 
@@ -310,7 +315,6 @@ de forma segura.
 // sintonia:routes
 // sintonia:modules
 // sintonia:openapi
-// sintonia:rpc
 ```
 
 Estos marcadores son:
@@ -319,21 +323,24 @@ Estos marcadores son:
 * permanentes
 * nunca deben eliminarse
 
+**Nota:** Se elimina `// sintonia:rpc`. El proyecto no usa ConnectRPC/gRPC.
+
 ---
 
 # Naming inteligente
 
 ```text
-acta
-→ Acta
-→ actas
-→ acta_id
-→ ActaDto
-→ CreateActaRequest
-→ ListActasResponse
+device
+→ Device
+→ devices
+→ device_id
+→ DeviceDto
+→ CreateDeviceRequest
+→ ListDevicesResponse
+→ DeviceStatus (enum si aplica)
 ```
 
-Incluye pluralización automática y convenciones internas.
+Incluye pluralización automática y convenciones internas del proyecto.
 
 ---
 
@@ -360,9 +367,9 @@ sintonia g module <nombre> --no-rbac
 sintonia g entity <nombre>
 
 sintonia g migration <nombre>
-
-sintonia g proto <nombre>
 ```
+
+**Nota:** Se elimina `sintonia g proto`. El proyecto no usa Protobuf.
 
 ---
 
@@ -397,7 +404,11 @@ La CLI valida automáticamente:
 | Soft Delete activo     | ✔          |
 | DTOs fuera del dominio | ✔          |
 | OpenAPI registrado     | ✔          |
-| `.proto` sincronizado  | ✔          |
+| `time` crate (no `chrono`) | ✔    |
+| `jsonwebtoken` ausente | ✔          |
+| `pasetors` presente    | ✔          |
+
+**Nota:** Se elimina "`.proto` sincronizado" y "ConnectRPC sincronizado" de las validaciones. El proyecto usa REST + OpenAPI (ADR 0016).
 
 ---
 
@@ -408,7 +419,8 @@ La CLI valida automáticamente:
 ✔ PASETO configurado
 ✔ Soft Delete detectado
 ✔ OpenAPI sincronizado
-✔ ConnectRPC sincronizado
+✔ REST API válida
+✔ time crate en uso (no chrono)
 
 Estado: Arquitectura válida
 ```
@@ -420,8 +432,9 @@ Estado: Arquitectura válida
 ```bash
 ✗ sqlx encontrado en crates/domain
 ✗ jsonwebtoken encontrado en apps/api
-✗ DELETE FROM users detectado
+✗ DELETE FROM devices detectado
 ✗ Endpoint sin OpenAPI
+✗ chrono encontrado en crates/domain (usar time)
 ```
 
 ---
@@ -431,7 +444,7 @@ Estado: Arquitectura válida
 El CLI nunca sobrescribe archivos existentes sin confirmación explícita.
 
 ```bash
-⚠ acta_handler.rs ya existe
+⚠ device_handler.rs ya existe
 Usar --force para reemplazar
 ```
 
@@ -445,14 +458,37 @@ Cada módulo incluye:
 
 ```rust
 #[tokio::test]
-async fn should_create_acta() {}
+async fn should_create_device() {
+    // Arrange
+    let repo = InMemoryDeviceRepository::new();
+    let use_case = CreateDeviceUseCase::new(repo);
+
+    // Act
+    let result = use_case.execute(CreateDeviceInput { ... }).await;
+
+    // Assert
+    assert!(result.is_ok());
+}
 ```
 
 ## Integration tests
 
 ```rust
 #[tokio::test]
-async fn should_return_201() {}
+async fn should_return_201_on_create_device() {
+    let app = spawn_app().await;
+    let token = app.login_admin().await;
+
+    let response = app
+        .client
+        .post("/api/v1/devices")
+        .bearer_auth(token)
+        .json(&json!({ ... }))
+        .send()
+        .await;
+
+    assert_eq!(response.status(), 201);
+}
 ```
 
 ---
@@ -461,11 +497,13 @@ async fn should_return_201() {}
 
 | Fase   | Objetivo                               |
 | ------ | -------------------------------------- |
-| Fase 0 | 3 módulos manuales                     |
-| Fase 1 | Generación básica                      |
-| Fase 2 | AST editing                            |
-| Fase 3 | Guardián arquitectónico                |
-| Fase 4 | Generación ConnectRPC/OpenAPI completa |
+| Fase 0 | 3 módulos manuales (users, sedes, devices) |
+| Fase 1 | Generación básica (entity, repository, use case, handler, DTO, migration) |
+| Fase 2 | AST editing (routers, OpenAPI registry) |
+| Fase 3 | Guardián arquitectónico (`check arch`) |
+| Fase 4 | Generación OpenAPI completa + RBAC seeds automáticos |
+
+**Nota:** Se elimina "Generación ConnectRPC/OpenAPI completa" de la Fase 4. El proyecto solo usa OpenAPI (ADR 0016).
 
 ---
 
@@ -478,6 +516,7 @@ async fn should_return_201() {}
 | Node generators             | Fuera del stack Rust             |
 | Yeoman/Plop                 | Dependencia extra innecesaria    |
 | Automatizar desde el inicio | Patrones aún no comprendidos     |
+| ConnectRPC generators       | Proyecto usa REST + OpenAPI, no gRPC |
 
 ---
 
@@ -493,6 +532,7 @@ async fn should_return_201() {}
 | `comfy-table`    | Output visual profesional            |
 | `clap_mangen`    | Generación automática de páginas man |
 | `cargo_metadata` | Inspección del workspace Rust        |
+| `time`           | Crate de fechas (no `chrono`)       |
 
 ---
 
@@ -503,11 +543,11 @@ async fn should_return_201() {}
 * Arquitectura consistente en todos los módulos
 * RBAC imposible de olvidar
 * OpenAPI sincronizado automáticamente
-* ConnectRPC sincronizado automáticamente
 * Soft Delete garantizado
 * Menos errores humanos
 * Desarrollo mucho más rápido
 * Onboarding más simple para nuevos developers
+* Validación arquitectónica automática en CI
 
 ---
 
@@ -519,6 +559,8 @@ async fn should_return_201() {}
 
 → mitigado porque vive dentro del monorepo y sigue las mismas reglas de calidad
 
+→ tests del CLI corren con `cargo nextest run -p cli`
+
 ---
 
 ### Riesgo de developers que no entienden el sistema
@@ -526,6 +568,8 @@ async fn should_return_201() {}
 → mitigado con la regla obligatoria de los 3 módulos manuales
 
 → nadie usa el generador sin comprender primero la arquitectura
+
+→ `sintonia check arch` detecta desviaciones
 
 ---
 
@@ -535,14 +579,30 @@ async fn should_return_201() {}
 
 → los marcadores limitan el alcance de modificaciones
 
+→ tests de integración validan que los edits no rompen compilación
+
 ---
 
 # Decisiones derivadas
 
 * Todos los módulos nuevos se crean con `sintonia g module`
 * Soft Delete es obligatorio por defecto
-* OpenAPI y ConnectRPC se registran automáticamente
-* `sintonia check arch` corre en CI y pre-push hooks
+* OpenAPI se registra automáticamente vía AST editing
+* `sintonia check arch` corre en CI y pre-push hooks (lefthook)
 * Los marcadores `// sintonia:*` son inamovibles
 * El CLI vive en `apps/cli/`
 * Los templates `.tera` son parte crítica del sistema y se versionan en git
+* **No se generan archivos `.proto` ni servicios RPC** — el proyecto usa REST + OpenAPI
+* **JWT está prohibido** — el generador usa PASETO en todos los handlers y tests
+* **Se usa `time` crate** — el generador no usa `chrono` en entidades ni migraciones
+* Los seeds RBAC se generan para PostgreSQL (`ON CONFLICT`), no SQLite
+* El CLI respeta la estructura de crates del workspace: `domain`, `application`, `database`, `infrastructure`
+
+---
+
+# Historial de cambios
+
+| Versión | Fecha       | Cambios realizados |
+| ------- | ----------- | ------------------ |
+| 1.0     | 2026 (orig) | Versión inicial con ConnectRPC, Protobuf, `project`/`report` como módulos de ejemplo, SQLite (`INSERT OR IGNORE`), `chrono` implícito |
+| 2.0     | 2026-05-16  | Elimina ConnectRPC/gRPC/Protobuf del CLI y validaciones; reemplaza módulos genéricos (`project`, `report`, `acta`) por dominio real (`users`, `sedes`, `devices`); actualiza SQL a PostgreSQL (`ON CONFLICT`); agrega validación de `time` vs `chrono` y `jsonwebtoken` ausente; actualiza Fase 4; actualiza ejemplos de salida |

@@ -15,7 +15,6 @@
 | 1 | `ROADMAP-BACKEND.md` | Dominio + DB + API + Monitoreo | Día 1-3 | [ ] Pendiente |
 | 2 | `ROADMAP-FRONTEND.md` | SvelteKit + Dashboard + Mapas | Paralelo con Backend | [ ] Pendiente |
 | 3 | `ROADMAP-AUTH-FULLSTACK.md` | Login/Registro back+front | Después de Backend | [ ] Pendiente |
-| 4 | `ROADMAP-INFRA.md` | Deploy + Caddy + Kamal + Litestream | MVP backend listo | [ ] Pendiente |
 | 5 | `ROADMAP-MONITOREO.md` | Agentes + SNMP + Topología | Después de Backend II | [ ] Pendiente |
 | — | **MVP EN PRODUCCIÓN** | Monitoreo de red regional | — | [ ] Pendiente |
 
@@ -174,7 +173,6 @@ litestream snapshots → entradas de hoy
     [ ] 03-ROADMAP-BACKEND.md completado
     [ ] 04-ROADMAP-FRONTEND.md completado
     [ ] 05-ROADMAP-AUTH-FULLSTACK.md completado
-    [ ] 07-ROADMAP-INFRA.md completado
 ```
 
 ---
@@ -204,11 +202,9 @@ litestream snapshots → entradas de hoy
 | Deploy | Coolify | ADR 0019 |
 | Auth | PASETO | ADR 0008 |
 | Jobs | Apalis | ADR 0015 |
-| Mail | Resend + React Email | ADR (futuro) |
 | Monitoreo | Healthchecks.io | ADR 0014 |
 | Realtime | SSE | ADR 0017, ADR 0020 |
 | API Docs | OpenAPI + Utoipa | ADR 0016 |
-| gRPC | ConnectRPC | ADR 0015 |
 | SNMP | snmp crate | ADR 0020 |
 | Topología | LayerChart | ADR 0020 |
 

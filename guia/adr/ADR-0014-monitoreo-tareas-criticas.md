@@ -3,13 +3,14 @@
 | Campo               | Valor                                                                       |
 | ------------------- | --------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                  |
-| **Fecha**           | 2026                                                                        |
+| **Fecha**           | 2026-05-16                                                                   |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                            |
-| **Relacionado con** | ADR 0004 (Litestream backups), ADR 0015 (Apalis jobs), ADR 0013 (Caddy TLS), ADR 0020 (Monitoreo Regional) |
+| **Relacionado con** | ADR 0004 (PostgreSQL backups), ADR 0015 (Apalis jobs), ADR 0013 (Docker Compose), ADR 0020 (Monitoreo Regional) |
+| **Última revisión** | 2026-05-16 — Corrección: PostgreSQL backup (no Litestream) + Sentry postergado |
 
 ---
 
-# Contexto
+## Contexto
 
 En un VPS de $5 sin equipo de monitoreo 24/7, necesitamos saber si una tarea crítica dejó
 de correr — antes de que el problema se vuelva un desastre.
@@ -25,14 +26,14 @@ Necesitamos:
 
 ---
 
-# Decisión
+## Decisión
 
-Usar **Healthchecks.io** con el patrón de **"Dead Man’s Switch"** (interruptor del hombre muerto):
+Usar **Healthchecks.io** con el patrón de **"Dead Man's Switch"** (interruptor del hombre muerto):
 el servidor avisa que completó una tarea; si el aviso no llega, Healthchecks asume que algo falló y alerta.
 
 ---
 
-# 1 — Patrón de monitoreo: “si no llega el ping, algo murió”
+## 1 — Patrón de monitoreo: "si no llega el ping, algo murió"
 
 ```bash
 # Ping SOLO si la tarea terminó correctamente
@@ -54,81 +55,127 @@ el servidor avisa que completó una tarea; si el aviso no llega, Healthchecks as
 
 ---
 
-# 2 — Monitoreo de backups Litestream
+## 2 — Monitoreo de backups PostgreSQL
 
-Relacionado con ADR 0004.
+**Actualizado:** El proyecto usa PostgreSQL (ADR 0004), no SQLite/Litestream.
 
-Verifica que exista un snapshot actualizado en S3.
+Verifica que exista un backup actualizado (via `pg_dump` o herramienta nativa).
 
 ```bash
 # Ejecutar cada hora
-litestream snapshots s3://bucket/boilerplate/db \
-  | grep -q "$(date +%Y-%m-%d)" \
-  && curl -fsS -m 10 https://hc-ping.com/${HC_LITESTREAM_UUID}
+# Verificar que el último backup no tenga más de 25 horas
+find /backups/redes -name "*.sql.gz" -mtime -1 | grep -q .   && curl -fsS -m 10 https://hc-ping.com/${HC_POSTGRES_BACKUP_UUID}
 ```
 
 ## Qué detecta
 
-* Litestream detenido
-* Backups corruptos
-* Problemas de acceso a S3
+* Backup detenido
+* Backups corruptos (archivo vacío o incompleto)
+* Problemas de acceso a storage
 * VPS apagado
 * Cron detenido
 
+**Nota:** Para backups automatizados con pgBackRest o similar, adaptar el script de verificación.
+
 ---
 
-# 3 — Heartbeat del worker Apalis
+## 3 — Heartbeat del worker Apalis
 
 Relacionado con ADR 0015.
 
 ```rust
-// apps/api/src/jobs/worker.rs
+//! Ubicación: `crates/monitoring/src/healthchecks.rs`
+//!
+//! Descripción: Wrapper para pings a Healthchecks.io con tracing integration.
+//!              Usa reqwest 0.13 con timeout agresivo.
+//!
+//! ADRs: 0014, 0015
 
-async fn worker_heartbeat(hc_url: &str) {
-    if let Err(error) = reqwest::get(hc_url).await {
-        tracing::warn!(
-            error = ?error,
-            "healthcheck ping failed"
-        );
+use std::time::Duration;
+use tracing::{info, warn};
+
+pub async fn ping(hc_url: &str, job_name: &str) {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_secs(5))
+        .build()
+        .expect("failed to build reqwest client");
+
+    match client.get(hc_url).send().await {
+        Ok(response) if response.status().is_success() => {
+            info!(
+                job = %job_name,
+                status = %response.status(),
+                "healthcheck ping succeeded"
+            );
+        }
+        Ok(response) => {
+            warn!(
+                job = %job_name,
+                status = %response.status(),
+                "healthcheck ping returned non-success"
+            );
+        }
+        Err(error) => {
+            warn!(
+                job = %job_name,
+                error = ?error,
+                "healthcheck ping failed"
+            );
+        }
     }
+}
+
+/// Ping con /start para jobs de larga duración
+pub async fn ping_start(hc_url: &str, job_name: &str) {
+    let start_url = format!("{}/start", hc_url);
+    ping(&start_url, &format!("{}_start", job_name)).await;
+}
+
+/// Ping con /fail para reportar fallo explícito
+pub async fn ping_fail(hc_url: &str, job_name: &str) {
+    let fail_url = format!("{}/fail", hc_url);
+    ping(&fail_url, &format!("{}_fail", job_name)).await;
 }
 ```
 
 ## Estrategia
 
-* Ping cada 5 minutos
-* Timeout agresivo
+* Ping cada 5 minutos para workers
+* Usar `/start` al iniciar job largo + `/` (success) al terminar
+* Usar `/fail` si el job detecta error interno pero aún puede hacer HTTP
+* Timeout agresivo (5s)
 * Error no bloqueante
 * Si el worker deja de procesar → no hay ping → alerta inmediata
 
 ---
 
-# 4 — Verificación de TLS
+## 4 — Verificación de TLS
 
-Relacionado con ADR 0013.
+Relacionado con ADR 0013 (Docker Compose + Coolify).
+
+Coolify gestiona TLS automáticamente via Caddy interno, pero verificación manual como respaldo:
 
 ```bash
 # Verifica que el certificado no expire en menos de 30 días
-openssl s_client -connect tudominio.com:443 2>/dev/null \
-  | openssl x509 -noout -checkend 2592000 \
-  && curl -fsS https://hc-ping.com/${HC_TLS_UUID}
+openssl s_client -connect tudominio.com:443 2>/dev/null   | openssl x509 -noout -checkend 2592000   && curl -fsS https://hc-ping.com/${HC_TLS_UUID}
 ```
 
 ## Beneficio
 
-Evita caídas por certificados expirados.
+Evita caídas por certificados expirados (fallback si Coolify falla).
 
 ---
 
-# 5 — Monitoreo de deploys
+## 5 — Monitoreo de deploys
 
 ```makefile
-# justfile
+# justfile (alineado con ADR 0012, ADR 0019)
 
 deploy:
-    just audit
-    just test
-    kamal deploy
+    just quality
+    just test-all
+    just build
+    # Deploy via Coolify (webhook o dashboard)
     curl -fsS ${HC_DEPLOY_UUID:+https://hc-ping.com/$HC_DEPLOY_UUID} || true
 ```
 
@@ -138,23 +185,24 @@ Healthchecks mantiene historial automático de deploys exitosos.
 
 ---
 
-# Configuración recomendada
+## Configuración recomendada
 
-| Check             | Intervalo | Grace Period | Severidad   |
+| Check | Intervalo | Grace Period | Severidad |
 | ----------------- | --------- | ------------ | ----------- |
-| Litestream backup | 1h        | 15 min       | Alta        |
-| Worker Apalis     | 5 min     | 2 min        | Crítica     |
-| TLS               | 24h       | 2h           | Media       |
-| Deploy            | Manual    | —            | Informativa |
+| PostgreSQL backup | 1h | 15 min | Alta |
+| Worker Apalis | 5 min | 2 min | Crítica |
+| TLS | 24h | 2h | Media |
+| Deploy | Manual | — | Informativa |
 
 ---
 
-# Variables de entorno
+## Variables de entorno
 
 ```bash
 # .env.example
 
-HC_LITESTREAM_UUID=
+HC_API_KEY=              # Opcional — para API de gestión de checks
+HC_POSTGRES_BACKUP_UUID=
 HC_DEPLOY_UUID=
 HC_TLS_UUID=
 HC_WORKER_UUID=
@@ -166,44 +214,46 @@ El sistema debe funcionar incluso si no están configuradas.
 
 ---
 
-# Wrapper helper recomendado
+## Crate de monitoreo
 
-Centralizar los pings evita repetición.
-
-```rust
-// crates/monitoring/src/healthchecks.rs
-
-use std::time::Duration;
-
-pub async fn ping(url: &str) {
-    let client = reqwest::Client::builder()
-        .timeout(Duration::from_secs(5))
-        .build()
-        .expect("failed to build reqwest client");
-
-    if let Err(error) = client.get(url).send().await {
-        tracing::warn!(
-            error = ?error,
-            "healthcheck ping failed"
-        );
-    }
-}
+```text
+crates/
+└── monitoring/
+    ├── Cargo.toml
+    └── src/
+        ├── lib.rs
+        └── healthchecks.rs   # Wrapper de pings + tracing
 ```
 
 ---
 
-# Arquitectura final
+## Dependencias
+
+```toml
+# crates/monitoring/Cargo.toml
+
+[dependencies]
+reqwest = { version = "0.13", features = ["json"], default-features = false }
+tokio = { version = "1.45", features = ["time"] }
+tracing = "0.1"
+```
+
+**Nota:** `reqwest 0.13` usa `rustls` como TLS backend por defecto. Si se necesita `native-tls`, usar feature explícita.
+
+---
+
+## Arquitectura final
 
 ```text
 ┌─────────────────────────────┐
-│         VPS ($5)            │
+│         VPS / Coolify       │
 │                             │
 │  ┌──────────────────────┐   │
 │  │     Rust API         │───┼──── ping ───▶ Healthchecks.io
 │  ├──────────────────────┤   │
 │  │     Apalis Worker    │───┤
 │  ├──────────────────────┤   │
-│  │     Litestream       │───┤
+│  │   PostgreSQL Backup │───┤
 │  └──────────────────────┘   │
 │                             │
 └─────────────────────────────┘
@@ -217,34 +267,35 @@ Si NO llega el ping:
 
 ---
 
-# Alternativas consideradas
+## Alternativas consideradas
 
-| Opción                    | Motivo de descarte            |
+| Opción | Motivo de descarte |
 | ------------------------- | ----------------------------- |
-| UptimeRobot               | Solo monitorea HTTP público   |
-| Prometheus + Alertmanager | Muy pesado para 1GB RAM       |
-| Scripts propios           | Mismo punto ciego del VPS     |
-| Better Uptime             | Menor capa gratuita           |
-| Grafana stack             | Complejidad excesiva para MVP |
+| UptimeRobot | Solo monitorea HTTP público |
+| Prometheus + Alertmanager | Muy pesado para 1GB RAM |
+| Scripts propios | Mismo punto ciego del VPS |
+| Better Uptime | Menor capa gratuita |
+| Grafana stack | Complejidad excesiva para MVP |
+| Sentry Crons | Requiere Rust 1.88+ (postergado) |
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+## Herramientas y Librerías (Edición 2026)
 
-| Herramienta      | Propósito                                          |
-| ---------------- | -------------------------------------------------- |
-| `reqwest`        | Cliente HTTP robusto con timeout y retries         |
-| `Sentry Crons`   | Integrar errores + cron monitoring en un dashboard |
-| `Better Stack`   | Alternativa moderna todo-en-uno                    |
-| Telegram Bot API | Alertas push inmediatas                            |
+| Herramienta | Propósito | Versión | Estado |
+| ---------------- | -------------------------------------------------- | -------- | ------ |
+| `reqwest` | Cliente HTTP robusto con timeout y retries | 0.13.2 | ✅ Activa |
+| `tracing` | Observabilidad estructurada | workspace | ✅ Activa |
+| Sentry Crons | Integrar errores + cron monitoring en un dashboard | 0.48.2 | ⏳ Requiere Rust 1.88+ |
+| Telegram Bot API | Alertas push inmediatas | — | ✅ Activa |
 
 ---
 
-# Consecuencias
+## Consecuencias
 
-## ✅ Positivas
+### ✅ Positivas
 
-* Costo ≈ $0
+* Costo ≈ $0 (capa gratuita: 20 checks)
 * RAM ≈ 0
 * CPU ≈ 0
 * Detecta caída total del VPS
@@ -252,48 +303,48 @@ Si NO llega el ping:
 * Integración extremadamente simple
 * Historial automático de tareas y deploys
 
----
+### ⚠️ Negativas / Trade-offs
 
-## ⚠️ Negativas / Trade-offs
-
-### Dependencia externa
+**Dependencia externa**
 
 Si Healthchecks.io cae, no habrá alertas.
 
-### Mitigación
+**Mitigación**
 
 * Configurar checks duplicados críticos
 * UptimeRobot o Better Stack como backup
 * Mantener logs locales estructurados
 
----
-
-### No reemplaza observabilidad completa
+**No reemplaza observabilidad completa**
 
 Healthchecks dice:
 
-> “algo dejó de correr”
+> "algo dejó de correr"
 
 pero NO explica:
 
-> “por qué falló”
+> "por qué falló"
 
-### Mitigación
+**Mitigación**
 
 Combinar con:
 
 * tracing JSON
 * request_id
 * logs estructurados
-* Sentry (futuro)
+* Sentry (futuro, postergado hasta Rust 1.88+)
 
 ---
 
-# Decisiones derivadas
+## Decisiones derivadas
 
 * Las UUIDs viven en `.env.local`
+* `HC_API_KEY` opcional para API de gestión
 * Nunca hardcodear URLs de Healthchecks
-* El ping ocurre SOLO si la tarea fue exitosa
+* El ping ocurre SOLO si la tarea fue exitosa (o /fail si falló explícitamente)
 * El worker heartbeat es obligatorio en producción
 * `just deploy` registra automáticamente deploys exitosos
 * Los checks son opcionales en desarrollo local
+* El wrapper vive en `crates/monitoring/`
+* `reqwest 0.13` es la versión oficial para HTTP client
+* Sentry Crons se evaluará cuando el toolchain alcance Rust 1.88+

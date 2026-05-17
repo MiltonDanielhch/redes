@@ -4,7 +4,7 @@
 > herramientas instaladas y `cargo check --workspace` pasando limpio.
 >
 > **Referencia Principal:** ADR 0020 (Módulo de Monitoreo de Infraestructura Regional)
-> **Referencias:** ADR 0001, ADR 0002, ADR 0003, ADR 0012, ADR 0017, ADR 0015, ADR 0016
+> **Referencias:** ADR 0001, ADR 0002, ADR 0003, ADR 0012, ADR 0017, ADR 0015, ADR 0016, ADR 0021, ADR 0022
 > **Estimado:** 1-2 días de trabajo
 
 ---
@@ -13,14 +13,7 @@
 
 ```
 [ ] Pendiente   [~] En progreso   [x] Completado   [!] Bloqueado
-🟡 Fase 2      🔴 Fase 3
-
-Leyenda de Fases:
-• Fase 1 (MVP)   → Funcionalidad core — implementar ahora
-• 🟡 Fase 2      → Diferida — implementar SOLO cuando el problema exista
-• 🔴 Fase 3      → Escalamiento futuro — no implementar sin criterio medido
 ```
-
 ---
 
 ## Progreso
@@ -58,14 +51,14 @@ Debe operar con **Local-First** tolerando:
 ```
 mise.toml en la raíz (toolchain management)
     └─ Ref: ADR 0012, https://mise.jdx.dev
-    [ ] rust = "1.95"  ← Versión 2026
+    [ ] rust = "1.86"  ← Última estable verificada (Edition 2024 soportada desde 1.85+)
     [ ] node = "24"
     [ ] pnpm = "10"
     [ ] just = "1.40"
 
 rust-toolchain.toml en la raíz
     └─ Ref: https://rust-lang.github.io/rustup/overrides.html
-    [ ] channel = "1.95.0"
+    [ ] channel = "1.86.0"
     [ ] components = ["rustfmt", "clippy", "rust-analyzer"]
     [ ] targets = ["x86_64-unknown-linux-musl"]
     [ ] profile = "minimal"
@@ -82,45 +75,62 @@ Crear carpetas de crates:
     [ ] crates/infrastructure/← Ref: ADR 0003 (Axum)
     [ ] crates/database/      ← Ref: ADR 0004 (PostgreSQL), ADR 0020
     [ ] crates/auth/          ← Ref: ADR 0008 (PASETO)
-    [ ] crates/mailer/        ← Ref: ADR 0016 (Resend)
-    [ ] crates/storage/       ← Ref: ADR 0020 (Tigris)
-    [ ] crates/monitoring/    ← Ref: ADR 0015 (Healthchecks), ADR 0020
+    [ ] crates/inventory/     ← Ref: ADR 0020 (Inventario físico de dispositivos)
+    [ ] crates/monitoring/    ← Ref: ADR 0014 (Healthchecks), ADR 0020
     [ ] crates/jobs/          ← Ref: ADR 0015 (Apalis), ADR 0020
-    [ ] crates/sync/          ← Ref: ADR 0020
+    [ ] crates/sync/          ← Ref: ADR 0021 (Local-First Sync Offline)
     [ ] crates/snmp/          ← Ref: ADR 0020 (Monitoreo red)
     [ ] crates/topology/      ← Ref: ADR 0020 (Topología red)
-    [ ] crates/events/        🟡 Fase 2 — Ref: ADR 0015 (Jobs)
+    [ ] crates/storage/       ← Ref: ADR 0020 (Almacenamiento S3/assets)
 
 Crear carpetas de apps:
     [ ] apps/api/             ← Ref: ADR 0003 (Axum)
     [ ] apps/web/             ← Ref: ADR 0017 (SvelteKit + Svelte 5)
-    [ ] apps/mailer/          ← Ref: ADR 0016 (Resend)
-    [ ] apps/agent/           ← Ref: ADR 0020 (Agente de monitoreo)
-    [ ] apps/cli/             🟡 Fase 2 — Ref: ADR 0018
+    [ ] apps/agent/           ← Ref: ADR 0022 (Agente de monitoreo distribuido)
 
 Crear carpetas de infraestructura:
-    [ ] infra/docker/         ← Ref: ADR 0013, ADR 0014
-    [ ] infra/caddy/          ← Ref: ADR 0014
-    [ ] infra/coolify/       ← Ref: ADR 0019 (Coolify)
-    [ ] infra/kamal/          ← Ref: ADR 0014
-    [ ] infra/scripts/        ← Ref: ADR 0020 (scripts monitoreo)
+    [ ] infra/docker/         ← Ref: ADR 0013 (Docker Compose)
+    [ ] infra/coolify/        ← Ref: ADR 0019 (Coolify)
 
 Crear carpetas de datos:
     [ ] data/migrations/      ← Ref: ADR 0005
     [ ] data/seeds/           ← Ref: ADR 0005
     [ ] data/assets/         ← Ref: ADR 0020 (snmp mibs)
 
-pnpm-workspace.yaml  (packages: apps/web, apps/mailer)
+pnpm-workspace.yaml  (packages: apps/web)
     └─ Ref: ADR 0017
+    [ ] packages: ["apps/web"]
 
 README.md en la raíz
     └─ Copiar resumen de arquitectura
 
-proto/buf.yaml + proto/buf.gen.yaml + proto/v1/
-    🟡 Fase 2 — Ref: ADR 0015 (Jobs)
 ```
 
-**Verificación G.1:** `ls -la` muestra la estructura completa.
+**Inicialización mínima de crates Rust:**
+```bash
+# Inicializar cada crate como librería (lib.rs vacío mínimo)
+cargo init --lib crates/domain
+cargo init --lib crates/application
+cargo init --lib crates/infrastructure
+cargo init --lib crates/database
+cargo init --lib crates/auth
+cargo init --lib crates/inventory
+cargo init --lib crates/monitoring
+cargo init --lib crates/jobs
+cargo init --lib crates/sync
+cargo init --lib crates/snmp
+cargo init --lib crates/topology
+cargo init --lib crates/storage
+
+# Inicializar apps
+cargo init --bin apps/api
+cargo init --bin apps/agent
+
+# Inicializar frontend
+pnpm create svelte@latest apps/web  # o scaffolding según ADR 0017
+```
+
+**Verificación G.1:** `ls -la` muestra la estructura completa y `cargo check --workspace` no falla por crates vacíos.
 
 ---
 
@@ -133,20 +143,31 @@ Cada crate declara SOLO sus dependencias directas. El compilador hace cumplir la
 ```
 Workspace root Cargo.toml — [workspace.dependencies] centralizado
     [ ] Todas las dependencias en [workspace.dependencies]
-    
+    [ ] members list completo: crates/*, apps/*
+    [ ] resolver = "2"
+
 [profile.release] en workspace root:
-    [ ] opt-level = "z"
+    [ ] opt-level = 3           ← Rendimiento para backend de monitoreo en tiempo real
     [ ] lto = true
     [ ] codegen-units = 1
     [ ] panic = "abort"
     [ ] strip = true
     [ ] incremental = false
 
+[profile.release-size]      ← Perfil opcional para apps/agent si se necesita bin ligero
+    [ ] inherits = "release"
+    [ ] opt-level = "z"
+    [ ] lto = true
+    [ ] codegen-units = 1
+    [ ] panic = "abort"
+    [ ] strip = true
+
 crates/domain/Cargo.toml
     └─ Ref: ADR 0001 — domain SIN dependencias externas
     [ ] edition = "2024"
     [ ] thiserror, uuid, time, serde
-    [ ] VERIFICAR: cargo grep "sqlx" crates/domain/ → cero resultados
+    [ ] VERIFICAR: grep -r "sqlx" crates/domain/ --include="*.toml" → cero resultados
+    [ ] VERIFICAR: grep -r "axum" crates/domain/ --include="*.toml" → cero resultados
 
 crates/application/Cargo.toml
     └─ Ref: ADR 0001
@@ -164,13 +185,12 @@ crates/auth/Cargo.toml
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] argon2, pasetors, secrecy
-    [ ] VERIFICAR: cargo grep "jsonwebtoken" → cero resultados
+    [ ] VERIFICAR: grep -r "jsonwebtoken" . --include="*.toml" → cero resultados
 
-crates/mailer/Cargo.toml
-    └─ Ref: ADR 0016
+crates/inventory/Cargo.toml
+    └─ Ref: ADR 0020 (Inventario físico de dispositivos)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] resend-rs
 
 crates/storage/Cargo.toml
     └─ Ref: ADR 0020
@@ -179,7 +199,7 @@ crates/storage/Cargo.toml
     [ ] aws-config, aws-sdk-s3
 
 crates/monitoring/Cargo.toml
-    └─ Ref: ADR 0015 (Healthchecks), ADR 0020
+    └─ Ref: ADR 0014 (Healthchecks), ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] reqwest, tracing
@@ -191,7 +211,7 @@ crates/jobs/Cargo.toml
     [ ] apalis, async-trait
 
 crates/sync/Cargo.toml
-    └─ Ref: ADR 0020
+    └─ Ref: ADR 0021 (Local-First Sync Offline)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
     [ ] tokio, serde
@@ -210,23 +230,23 @@ crates/topology/Cargo.toml
 crates/infrastructure/Cargo.toml
     └─ Ref: ADR 0003 (Axum)
     [ ] edition = "2024"
-    [ ] application, database, auth, mailer, storage
-    [ ] monitoring, jobs, sync, snmp, topology
+    [ ] application, database, auth, storage
+    [ ] inventory, monitoring, jobs, sync, snmp, topology
     [ ] axum, utoipa, tower, tower-http
 
 apps/api/Cargo.toml
     └─ Ref: ADR 0003, ADR 0020
     [ ] edition = "2024"
-    [ ] infrastructure, database, auth, mailer, storage
+    [ ] infrastructure, database, auth, storage
     [ ] domain, application
 
 apps/agent/Cargo.toml
-    └─ Ref: ADR 0020 (Agente de monitoreo)
+    └─ Ref: ADR 0022 (Agente de monitoreo distribuido)
     [ ] edition = "2024"
     [ ] snmp, sync, monitoring, tokio, reqwest
 
 apps/cli/Cargo.toml
-    🟡 Fase 2
+    🟡 Fase 2 — Definir en roadmap futuro (CLI/Sintonía)
     [ ] domain, application, clap, tera
 ```
 
@@ -252,12 +272,13 @@ apps/cli/Cargo.toml
        ┌───────┴───────┐
        ▼               ▼
 ┌──────────────┐  ┌──────────────────────────────────────────┐
-│crates/database│  │crates/auth  crates/mailer  crates/storage│
-│(domain + sqlx)│  │crates/monitoring  crates/jobs            │
-│└─ ADR 0004   │  │crates/sync  crates/snmp  crates/topology │
-└──────────────┘  └──────────────────┬───────────────────────┘
-                                    │
-                                    ▼
+│crates/database│  │crates/auth  crates/storage            │
+│(domain + sqlx)│  │crates/inventory  crates/monitoring     │
+│└─ ADR 0004   │  │crates/jobs  crates/sync               │
+└──────────────┘  │crates/snmp  crates/topology            │
+                  └──────────────────┬───────────────────────┘
+                                     │
+                                     ▼
                    ┌──────────────────────────────────────┐
                    │  crates/infrastructure               │
                    │  (application + axum + config)      │
@@ -286,14 +307,15 @@ Instalar herramientas (versiones actualizadas 2026):
     [ ] cargo install cargo-nextest
     [ ] cargo install cargo-deny
     [ ] cargo install cargo-audit
-    [ ] cargo install sqlx-cli --features sqlite
+    [ ] cargo install sqlx-cli --features postgres,sqlite  ← PostgreSQL principal + SQLite para Local-First
     [ ] cargo install lefthook
-    [ ] cargo install just
+    # just ya está gestionado por mise.toml (verificar con mise doctor)
 
     [ ] npm install -g pnpm
 
 Verificar:
     [ ] mise doctor → toolchain completo
+    [ ] just --version → confirmar instalación
 ```
 
 ---
@@ -304,11 +326,12 @@ Verificar:
 
 ```
 justfile en la raíz con todos los comandos:
-    [ ] doctor      (verifica toolchain)
-    [ ] setup       (instala todo + lefthook install)
-    [ ] dev         (desarrollo completo)
-    [ ] dev-api     (solo backend)
+    [ ] doctor      (verifica toolchain: mise doctor + cargo --version + pnpm --version)
+    [ ] setup       (instala todo + lefthook install + cp .env.example .env.local)
+    [ ] dev         (desarrollo completo: api + web en paralelo)
+    [ ] dev-api     (solo backend: cargo watch -x check -x run --bin api)
     [ ] build       (cargo build --release)
+    [ ] build-agent (cargo build --release --bin agent --profile release-size)
     [ ] test        (cargo nextest run)
     [ ] lint        (cargo clippy -D warnings)
     [ ] fmt         (cargo fmt --all)
@@ -317,13 +340,13 @@ justfile en la raíz con todos los comandos:
     [ ] migrate     (sqlx migrate run)
     [ ] migrate-reset
     [ ] db-status
-    [ ] prepare
-    [ ] types       🟡 Fase 2 (buf generate)
-    [ ] deploy      🟡 Fase 2
+    [ ] prepare     (cargo sqlx prepare --workspace)
+    [ ] types       🟡 Fase 2 (buf generate / OpenAPI types)
+    [ ] deploy      🟡 Fase 2 (coolify deploy)
 
 lefthook.yml:
     [ ] pre-commit: cargo fmt --all --check
-    [ ] pre-push: cargo clippy + cargo nextest run + cargo deny
+    [ ] pre-push: cargo clippy + cargo nextest run + cargo deny check
 
 deny.toml:
     [ ] license-check: permitir MIT, Apache-2.0, BSD, ISC
@@ -332,13 +355,13 @@ deny.toml:
 
 .env.example con TODAS las variables:
     [ ] SERVER_PORT, ENVIRONMENT, RUST_LOG
-    [ ] DATABASE_URL
+    [ ] DATABASE_URL=postgres://user:pass@localhost:5432/redes  ← PostgreSQL principal
+    [ ] SQLITE_URL=file:./data/local.db  ← SQLite para Local-First (ADR 0021)
     [ ] PASETO_SECRET
     [ ] RESEND_API_KEY, MAIL_FROM
     [ ] AWS_ENDPOINT_URL_S3, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
     [ ] STORAGE_BUCKET
-    [ ] DATABASE_URL (PostgreSQL)
-    [ ] HC_* (Healthchecks.io)
+    [ ] HC_API_KEY, HC_PING_URL  ← Healthchecks.io (ADR 0014)
     [ ] SENTRY_DSN (opcional)
 ```
 
@@ -351,14 +374,15 @@ deny.toml:
 ```
 [ ] cargo check --workspace → cero errores
 [ ] cargo deny check → sin violations
-[ ] buf lint → sin errores
 [ ] grep -r "jsonwebtoken" . --include="*.toml" → cero resultados
 [ ] grep -r "sqlx" crates/domain/ --include="*.toml" → cero resultados
 [ ] grep -r "axum" crates/domain/ --include="*.toml" → cero resultados
 [ ] just --list → comandos visibles
-[ ] cargo nextest run --workspace → tests ejecutan
 [ ] lefthook install → hooks activos
 ```
+
+**Nota:** `cargo nextest run --workspace` y `buf lint` se verifican en fases posteriores
+(Backend I / Protocolos) cuando existan tests y archivos `.proto`.
 
 ---
 
@@ -373,11 +397,11 @@ deny.toml:
 
 Sedes Regionales (múltiples)
     ↓
-Agentes/Sensores Locales (apps/agent)
+Agentes/Sensores Locales (apps/agent) ← Ref: ADR 0022
     ↓
 API Axum (apps/api) ← Ref: ADR 0003
     ↓
-Jobs de procesamiento (crates/jobs - Apalis) ← Ref: ADR 0018
+Jobs de procesamiento (crates/jobs - Apalis) ← Ref: ADR 0015
     ↓
 PostgreSQL + métricas históricas (crates/database) ← Ref: ADR 0004
     ↓
@@ -386,7 +410,7 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 
 ### Componentes del Módulo (ADR 0020)
 
-| Componente  | Responsabilidad                   | Crate/App |
+| Componente  | Responsabilidad                   | Crate |
 | ----------- | --------------------------------- | --------- |
 | `inventory` | Inventario físico de dispositivos | crates/inventory |
 | `topology`  | Mapeo visual de conexiones        | crates/topology |
@@ -412,14 +436,16 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 |------------|------------|-----|
 | Backend | Rust + Axum | ADR 0003 |
 | Frontend | SvelteKit + Svelte 5 | ADR 0017 |
-| DB | PostgreSQL | ADR 0004 |
+| DB | PostgreSQL + SQLite (Local-First) | ADR 0004, ADR 0021 |
 | Deploy | Coolify | ADR 0019 |
 | Jobs | Apalis | ADR 0015 |
-| Mail | Resend + React Email | ADR (futuro) |
-| Monitoreo | Healthchecks.io | ADR 0014 |
+| Mail | Resend | ADR 0016 |
+| Monitoreo tareas | Healthchecks.io | ADR 0014 |
 | Realtime | SSE | ADR 0017 |
 | API Docs | OpenAPI + Utoipa | ADR 0016 |
-| gRPC | ConnectRPC | ADR 0015 |
+| Auth | PASETO v4 + argon2id | ADR 0008 |
+| Agentes distribuidos | Rust ligero + SNMP | ADR 0022 |
+| Sync offline | SQLite Wasm + sync queue | ADR 0021 |
 
 ---
 
@@ -427,7 +453,6 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 
 | ADR | Tema |
 |-----|------|
-| ADR 0020 | Módulo de Monitoreo de Infraestructura Regional |
 | ADR 0001 | Arquitectura Hexagonal |
 | ADR 0002 | Configuración Tipeada |
 | ADR 0003 | Stack Backend (Rust + Axum) |
@@ -440,19 +465,16 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 | ADR 0010 | Testing y Calidad |
 | ADR 0011 | Estándares de Desarrollo |
 | ADR 0012 | Herramientas de Desarrollo |
-| ADR 0013 | Build Externo de Binarios |
-| ADR 0014 | Infraestructura Docker Compose |
-| ADR 0015 | Monitoreo Healthchecks |
-| ADR 0016 | Mailer Resend |
-| ADR 0017 | (placeholder) |
-| ADR 0018 | Jobs Asíncronos Apalis |
-| ADR 0019 | Coolify Deploy |
-| ADR 0016 | Documentación OpenAPI |
+| ADR 0013 | Infraestructura Docker Compose |
+| ADR 0014 | Monitoreo Tareas Críticas (Healthchecks) |
+| ADR 0015 | Jobs Asíncronos Apalis |
+| ADR 0016 | Documentación OpenAPI + Mailer Resend |
 | ADR 0017 | Frontend SvelteKit + Svelte 5 |
 | ADR 0018 | Sintonía CLI |
 | ADR 0019 | Coolify Deploy |
-| ADR 0019 | Coolify Deploy |
 | ADR 0020 | Monitoreo de Infraestructura Regional |
+| ADR 0021 | Local-First Sync Offline |
+| ADR 0022 | Agentes Monitoreo Distribuidos |
 
 ---
 
@@ -478,8 +500,11 @@ just --list               # muestra todos los comandos
 | `unresolved import` en domain | Violación ADR 0001 | Domain no debe tener sqlx/axum |
 | `jsonwebtoken` encontrado | Violación ADR 0008 | Usar `pasetors` |
 | `duplicate workspace member` | Crate listado 2 veces | Buscar duplicado en `[workspace.members]` |
-| `just: command not found` | just no instalado | `cargo install just` |
+| `just: command not found` | just no instalado | `mise install` o `cargo install just` |
 | `.env.local` no existe | No copiado desde ejemplo | `cp .env.example .env.local` |
+| `rustup: target not found 1.95.0` | Versión inexistente | Actualizar a `1.86.0` en rust-toolchain.toml |
+| `crate inventory not found` | Carpeta no creada | Crear `crates/inventory/` y `cargo init --lib` |
+| `sqlx-cli: no postgres feature` | Instalado sin feature correcta | Reinstalar: `cargo install sqlx-cli --features postgres,sqlite` |
 
 ---
 

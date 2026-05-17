@@ -11,8 +11,8 @@
 | **Roadmap Actual** | `guia/roadmap/02-ROADMAP-GENESIS.md` | ← **FASE ACTIVA** — Génesis del proyecto |
 | **ADR Principal** | `guia/adr/ADR-0020-monitoreo-infraestructura-regional.md` | Definición del proyecto |
 | **Stack Tecnológico** | `guia/adr/ADR-0020-monitoreo-infraestructura-regional.md` | Stack definido en ADR 0020 |
-| **Arquitectura** | `guia/adr/ADR-0001-arquitectura-hexagonal-corregido.md` | Hexagonal Architecture |
-| **ADRs** | `guia/adr/` | 20 decisiones arquitectónicas activas |
+| **Arquitectura** | `guia/adr/ADR-0001-arquitectura-hexagonal.md` | Hexagonal Architecture |
+| **ADRs** | `guia/adr/` | 22 decisiones arquitectónicas activas |
 
 ---
 
@@ -32,6 +32,7 @@
 | ⏳ **Monitoreo II** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
 | ⏳ **Monitoreo III** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
 | ⏳ **Auth Fullstack** | `05-ROADMAP-AUTH-FULLSTACK.md` | Pendiente | 0% |
+| 🟡 **monitoring** | `80-ROADMAP-MONITORING.md` | Pendiente | 0% |
 
 **PROYECTO: Monitoreo de Infraestructura Regional - Gobernación del Beni** 🏛️
 
@@ -68,11 +69,11 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 - **Auth**: argon2id + PASETO v4 Local + Soft Delete
 - **Jobs async**: Apalis + métricas + alertas
 - **Cache**: in-process con Moka
-- **Local-First**: SQLite Wasm + sync queue para operación offline (ADR 0020)
+- **Local-First**: SQLite Wasm en frontend + sync queue para operación offline (ADR 0021)
 - **Observabilidad**: tracing + Sentry + Healthchecks.io
-- **Frontend**: SvelteKit + Svelte 5 + TanStack Query + LayerChart
+- **Frontend**: SvelteKit + Svelte 5 + TanStack Query + LayerChart + Paraglide JS
 - **SSE**: preferido sobre WebSocket para realtime (ADR 0020)
-- **Agentes**: ligera en sedes remotas (ADR 0020)
+- **Agentes**: Rust ligero en sedes remotas (ADR 0022)
 
 ## Tu Misión
 
@@ -93,7 +94,7 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 
 ### Frontend
 - SvelteKit SSR · Svelte 5 Runes · TypeScript · Tailwind v4
-- shadcn-svelte · TanStack Query · ArkType
+- shadcn-svelte · TanStack Query · ArkType · Paraglide JS
 - LayerChart · SSE client
 
 ### Componentes del Módulo de Monitoreo (ADR 0020)
@@ -129,24 +130,30 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 crates/
 ├── domain/        # Sin dependencias externas — solo thiserror, uuid, time, serde
 ├── application/  # Casos de uso — solo domain
-├── database/     # SQLx + repositorios — domain + sqlx
+├── database/     # SQLx + repositorios — domain + sqlx + PostgreSQL
 ├── auth/         # PASETO + argon2 — domain + pasetors
 ├── infrastructure/ # Axum + config + utoipa
-└── ...
+├── mailer/       # Resend adapter
+├── storage/      # S3-compatible (Tigris/MinIO/AWS)
+├── monitoring/   # Healthchecks.io client
+├── jobs/         # Apalis background jobs
+├── sync/         # Local-First sync logic (ADR 0021)
+├── snmp/         # SNMP protocol adapter
+└── topology/     # Network graph logic
 
 apps/
 ├── api/          # Axum server
 ├── web/          # SvelteKit
-├── agent/        # Agente de monitoreo
-└── ...
+└── agent/        # Agente de monitoreo Rust ligero (ADR 0022)
 ```
+
 ---
 
 ## Migraciones de Base de Datos
 
 > Ver `03-ROADMAP-BACKEND.md` para la lista completa de migraciones.
 
-Principales tablas: users, roles, permissions, sessions, audit_logs, sedes, devices, metric_readings, alerts, intrusion_events
+Principales tablas: users, roles, permissions, sessions, audit_logs, sedes, devices, device_links, metric_readings, alerts, intrusion_events, network_snapshots
 
 ---
 
@@ -157,23 +164,40 @@ Principales tablas: users, roles, permissions, sessions, audit_logs, sedes, devi
 3. **JWT prohibido** — solo PASETO v4 Local (pasetors) — tokens con `"v4.local."`
 4. **Soft Delete** — UPDATE `deleted_at`, nunca DELETE real
 5. Toda acción autenticada → `audit_logs` automático
-6. `cargo-deny` + `cargo-audit` en CI siempre
+6. `cargo-deny` + `cargo-audit` + `cargo-boundary` en CI siempre
 7. **SSE preferido sobre WebSocket** (ADR 0020)
-8. **Local-First** para operación offline (ADR 0020)
-9. Agentes ligeros en sedes remotas (ADR 0020)
+8. **Local-First** para operación offline (ADR 0021)
+9. Agentes Rust ligeros en sedes remotas (ADR 0022)
 10. Fail-fast en config — si falta variable, el proceso no arranca
 
 ---
 
 ## Documentos de Referencia
 
-- `ROADMAP-MASTER.md` — mapa general y orden de ejecución
-- `ROADMAP-GENESIS.md` — arranque del workspace con estructura de monitoreo
-- `ROADMAP-BACKEND.md` — backend con entidades y endpoints de monitoreo
-- `ROADMAP-FRONTEND.md` — dashboard, dispositivos, métricas, topología, alertas
-- `ROADMAP-AUTH-FULLSTACK.md` — login/registro back+front
-- `ROADMAP-INFRA.md` — deploy con Coolify + PostgreSQL
-- `ADR-0020-monitoreo-infraestructura-regional.md` — definición completa del proyecto
+| ADR | Tema |
+|-----|------|
+| ADR 0001 | Arquitectura Hexagonal |
+| ADR 0002 | Configuración Tipeada |
+| ADR 0003 | Stack Backend (Rust + Axum) |
+| ADR 0004 | Persistencia PostgreSQL |
+| ADR 0005 | Migraciones y Seeding |
+| ADR 0006 | RBAC, Sessions, Audit |
+| ADR 0007 | Manejo de Errores |
+| ADR 0008 | Seguridad Auth PASETO |
+| ADR 0009 | Rate Limiting |
+| ADR 0010 | Testing y Calidad |
+| ADR 0011 | Estándares de Desarrollo |
+| ADR 0012 | Herramientas de Desarrollo |
+| ADR 0013 | Infraestructura Docker Compose |
+| ADR 0014 | Monitoreo de Tareas Críticas (Healthchecks) |
+| ADR 0015 | Jobs Asíncronos Apalis |
+| ADR 0016 | Documentación OpenAPI + Utoipa |
+| ADR 0017 | Frontend SvelteKit + Svelte 5 |
+| ADR 0018 | Sintonía CLI |
+| ADR 0019 | Coolify Deploy |
+| ADR 0020 | Monitoreo de Infraestructura Regional |
+| ADR 0021 | Local-First y Sincronización Offline |
+| ADR 0022 | Agentes de Monitoreo Distribuidos |
 
 ---
 
@@ -228,7 +252,7 @@ Puedes y debes:
 ### Regla 6 — Trabajo en paralelo cuando tiene sentido
 
 **Válido:**
-- Backend I — Migraciones + Frontend I — Setup 
+- Backend I — Migraciones + Frontend I — Setup
 - Backend III — Auth + Frontend II — Tipos y store
 - Auth Fullstack + Landing (Landing no necesita auth completo)
 
@@ -237,15 +261,13 @@ Puedes y debes:
 - Deploy (Infra) antes de que el MVP esté listo
 - Desktop antes de que el MVP web esté en producción
 
-
 ### Regla 7 — Nunca asumir, siempre verificar
 
 Si algo no está claro, pregunta antes de escribir.
 
-
 ### Regla 8 — Encabezado de archivos (documentación)
 
-**Todo archivo de código debe comenzar con este encabezado estándar:**
+**Todo archivo de código fuente debe comenzar con este encabezado estándar:**
 
 ```rust
 //! Ubicación: `crates/domain/src/entities/user.rs`
@@ -295,6 +317,11 @@ impl UserId {
 - Archivos SQL (`.sql`): `--` comentarios multilínea al inicio
 - Configuraciones (`.yml`, `.toml`): `#` comentario descriptivo
 
+**No aplica a:**
+- Archivos en `tests/` (solo doc a nivel módulo con `//!`)
+- Archivos de configuración menores a 10 líneas
+- Código generado automáticamente
+
 **Ejemplo TypeScript:**
 
 ```typescript
@@ -304,7 +331,7 @@ impl UserId {
  * Descripción: Store de autenticación con TanStack Query. Gestiona estado de sesión,
  *              tokens PASETO y sincronización con API. Reactive con Svelte 5 Runes.
  * 
- * ADRs: 0022 (Frontend), 0008 (PASETO)
+ * ADRs: 0017 (Frontend), 0008 (PASETO)
  */
 
 import { createQuery } from '@tanstack/svelte-query';
@@ -373,7 +400,6 @@ cargo tree --depth 1 | grep <crate>
 - Añadir complejidad por "mejor práctica" teórica no probada
 - Romper reglas arquitectónicas por conveniencia
 
-
 ---
 
 ## Cómo Iniciar la Sesión
@@ -410,8 +436,6 @@ ls -la
 # Verificar toolchain
 just doctor
 ```
-
 ---
-
-**Proyecto:** Monitoreo de Infraestructura Regional - Gobernación del Beni  
+**Proyecto:** Monitoreo de Infraestructura Regional - Gobernación del Beni
 **Referencia Principal:** ADR 0020

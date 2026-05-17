@@ -3,9 +3,9 @@
 | Campo               | Valor                                                                                                                                                  |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                                                             |
-| **Fecha**           | 2026                                                                                                                                                   |
+| **Fecha**           | 2026-05-16                                                                                                                                             |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                       |
-| **Relacionado con** | ADR 0001 (Monolito Modular), ADR 0003 (Axum), ADR 0017 (SvelteKit + ConnectRPC), ADR 0015 (Jobs + Apalis) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0004 (PostgreSQL), ADR 0006 (RBAC), ADR 0008 (PASETO), ADR 0015 (Jobs Apalis), ADR 0017 (Frontend SvelteKit), ADR 0021 (Local-First Sync Offline), ADR 0022 (Agentes Monitoreo Distribuidos) |
 
 ---
 
@@ -80,30 +80,32 @@ capaz de:
 ```text
 Sedes Regionales
    ↓
-Agentes/Sensores Locales
+Agentes/Sensores Locales (apps/agent) ← ADR 0022
    ↓
-API Axum (ADR 0003)
+API Axum (apps/api) ← ADR 0003
    ↓
-Jobs de procesamiento (Apalis)
+Jobs de procesamiento (crates/jobs - Apalis) ← ADR 0015
    ↓
-SQLite + métricas históricas
+PostgreSQL + métricas históricas (crates/database) ← ADR 0004
    ↓
-Dashboard SvelteKit realtime
+Dashboard SvelteKit realtime (apps/web) ← ADR 0017
 ```
+
+**Nota:** PostgreSQL es la base de datos principal del backend (ADR 0004). SQLite se usa únicamente en el frontend/browser para operación offline (ADR 0021 — Local-First), nunca como DB principal del servidor.
 
 ---
 
 # Componentes del módulo
 
-| Componente  | Responsabilidad                   |
-| ----------- | --------------------------------- |
-| `inventory` | Inventario físico de dispositivos |
-| `topology`  | Mapeo visual de conexiones        |
-| `metrics`   | Métricas de red                   |
-| `alerts`    | Detección de anomalías            |
-| `audit`     | Bitácora y reportes               |
-| `agents`    | Recolección distribuida           |
-| `sync`      | Sincronización offline            |
+| Componente  | Responsabilidad                   | Crate/App |
+| ----------- | --------------------------------- | --------- |
+| `inventory` | Inventario físico de dispositivos | crates/inventory |
+| `topology`  | Mapeo visual de conexiones        | crates/topology |
+| `metrics`   | Métricas de red                   | crates/database |
+| `alerts`    | Detección de anomalías            | crates/jobs |
+| `audit`     | Bitácora y reportes               | crates/database |
+| `agents`    | Recolección distribuida           | apps/agent |
+| `sync`      | Sincronización offline            | crates/sync |
 
 ---
 
@@ -134,8 +136,8 @@ Registrar toda la infraestructura tecnológica institucional.
 | Campo     | Descripción                    |
 | --------- | ------------------------------ |
 | hostname  | Nombre del dispositivo         |
-| IP        | Dirección IP                   |
-| MAC       | Dirección física               |
+| IP        | Dirección IP (IPv4)            |
+| MAC       | Dirección física (IEEE 802)    |
 | ubicación | Oficina física                 |
 | sede      | Dependencia institucional      |
 | vendor    | Fabricante                     |
@@ -161,6 +163,7 @@ Visualizar gráficamente las conexiones físicas y lógicas.
 * uplinks WAN
 * APs conectados
 * estado visual por color
+* detección de single points of failure
 
 ---
 
@@ -179,14 +182,14 @@ Visualizar gráficamente las conexiones físicas y lógicas.
 
 ## Métricas recolectadas
 
-* tráfico RX/TX
+* tráfico RX/TX (bytes)
 * uso por secretaría
 * saturación WAN
 * throughput histórico
 * utilización pico
-* latencia
-* packet loss
-* jitter
+* latencia (ms)
+* packet loss (%)
+* jitter (ms)
 
 ---
 
@@ -194,9 +197,11 @@ Visualizar gráficamente las conexiones físicas y lógicas.
 
 Por defecto:
 
-* SSE (ADR 0017)
-* polling adaptativo
-* WebSocket solo si realmente es necesario
+* **SSE** (Server-Sent Events) — preferido (ADR 0017)
+* Polling adaptativo (fallback si SSE no disponible)
+* WebSocket solo si realmente es necesario (casos excepcionales)
+
+**Nota:** La comunicación entre frontend y backend es REST + SSE. No se usa ConnectRPC ni gRPC en el stack web.
 
 ---
 
@@ -213,10 +218,10 @@ Detectar dispositivos no autorizados dentro de la red institucional.
 ### Descubrimiento
 
 * ARP scan
-* SNMP
-* ICMP discovery
-* DHCP logs
-* MAC learning
+* SNMP discovery
+* ICMP sweep
+* DHCP logs (si disponible)
+* MAC learning en switches
 
 ---
 
@@ -227,7 +232,9 @@ Comparar:
 ```text
 Dispositivo detectado
 VS
-Whitelist institucional
+Whitelist institucional (device_whitelist)
+VS
+Inventario conocido (devices)
 ```
 
 ---
@@ -262,7 +269,7 @@ Whitelist institucional
 
 | Canal     | Uso                   |
 | --------- | --------------------- |
-| Dashboard | Tiempo real           |
+| Dashboard | Tiempo real (SSE)     |
 | Email     | Incidentes críticos   |
 | Logs      | Auditoría             |
 | Webhook   | Integraciones futuras |
@@ -280,6 +287,8 @@ pub struct Sede {
     pub ubicacion:   String,
     pub secretaria:  String,
     pub created_at:  OffsetDateTime,
+    pub updated_at:  OffsetDateTime,
+    pub deleted_at:  Option<OffsetDateTime>,  // Soft Delete (ADR 0006)
 }
 ```
 
@@ -294,6 +303,9 @@ pub enum DeviceType {
     Router,
     Firewall,
     Server,
+    Ups,           // Uninterruptible Power Supply
+    Camera,        // Cámara IP
+    WirelessLink,  // Enlace inalámbrico/WAN
 }
 
 pub enum DeviceStatus {
@@ -305,12 +317,39 @@ pub enum DeviceStatus {
 pub struct Device {
     pub id:             DeviceId,
     pub hostname:       String,
-    pub ip:             IpAddr,
-    pub mac:            MacAddress,
+    pub ip_address:     String,           // Validación IPv4 en value object
+    pub mac_address:    String,           // Validación IEEE 802 en value object
     pub device_type:    DeviceType,
     pub status:         DeviceStatus,
     pub sede_id:        SedeId,
-    pub last_seen_at:   OffsetDateTime,
+    pub last_seen_at:   Option<OffsetDateTime>,
+    pub created_at:     OffsetDateTime,
+    pub updated_at:     OffsetDateTime,
+    pub deleted_at:     Option<OffsetDateTime>,  // Soft Delete (ADR 0006)
+}
+```
+
+---
+
+## Enlace entre dispositivos
+
+```rust
+pub enum LinkType {
+    Ethernet,
+    Fiber,
+    Wireless,
+    Serial,
+}
+
+pub struct DeviceLink {
+    pub id:               LinkId,
+    pub source_device_id: DeviceId,
+    pub target_device_id: DeviceId,
+    pub link_type:        LinkType,
+    pub bandwidth_mbps:   Option<i32>,
+    pub status:           DeviceStatus,
+    pub created_at:       OffsetDateTime,
+    pub updated_at:       OffsetDateTime,
 }
 ```
 
@@ -320,14 +359,97 @@ pub struct Device {
 
 ```rust
 pub struct MetricReading {
-    pub id:            ReadingId,
-    pub device_id:     DeviceId,
-    pub bandwidth_rx:  i64,
-    pub bandwidth_tx:  i64,
-    pub latency_ms:    f32,
-    pub packet_loss:   f32,
-    pub anomaly:       bool,
-    pub created_at:    OffsetDateTime,
+    pub id:                 ReadingId,
+    pub device_id:          DeviceId,
+    pub bandwidth_rx_bytes: i64,
+    pub bandwidth_tx_bytes: i64,
+    pub latency_ms:         Option<i32>,      // Precisión suficiente, evita f32
+    pub packet_loss_percent: Option<f64>,     // Doble precisión para agregaciones
+    pub anomaly_detected:   bool,
+    pub created_at:         OffsetDateTime,
+}
+```
+
+---
+
+## Alerta
+
+```rust
+pub enum AlertType {
+    DeviceOffline,
+    BandwidthSaturation,
+    PacketLoss,
+    Intrusion,
+    TopologyChange,
+    HighTraffic,
+}
+
+pub enum AlertSeverity {
+    Critical,
+    High,
+    Medium,
+    Low,
+}
+
+pub enum AlertStatus {
+    Active,
+    Acknowledged,
+    Resolved,
+}
+
+pub struct Alert {
+    pub id:              AlertId,
+    pub alert_type:      AlertType,
+    pub severity:        AlertSeverity,
+    pub device_id:       Option<DeviceId>,
+    pub message:         String,
+    pub details:         Option<String>,
+    pub status:          AlertStatus,
+    pub acknowledged_by: Option<UserId>,
+    pub acknowledged_at: Option<OffsetDateTime>,
+    pub created_at:      OffsetDateTime,
+    pub updated_at:      OffsetDateTime,
+}
+```
+
+---
+
+## Evento de intrusión
+
+```rust
+pub enum IntrusionStatus {
+    Detected,
+    Investigating,
+    Resolved,
+    FalsePositive,
+}
+
+pub struct IntrusionEvent {
+    pub id:           IntrusionId,
+    pub mac_address:  String,
+    pub ip_address:   Option<String>,
+    pub device_id:    Option<DeviceId>,
+    pub status:       IntrusionStatus,
+    pub detected_at:  OffsetDateTime,
+    pub resolved_at:  Option<OffsetDateTime>,
+    pub notes:        Option<String>,
+    pub created_at:   OffsetDateTime,
+    pub updated_at:   OffsetDateTime,
+}
+```
+
+---
+
+## Whitelist de dispositivos
+
+```rust
+pub struct DeviceWhitelist {
+    pub id:          WhitelistId,
+    pub mac_address: String,
+    pub description: String,
+    pub approved_by: UserId,
+    pub approved_at: OffsetDateTime,
+    pub created_at:  OffsetDateTime,
 }
 ```
 
@@ -344,32 +466,40 @@ pub struct MetricReading {
 | LayerChart     | Gráficos            |
 | SSE            | Realtime            |
 | TailwindCSS    | UI                  |
-| ConnectRPC     | Comunicación tipada |
+| TanStack Query | Caching de datos    |
+| ArkType        | Validación runtime  |
+
+**Nota:** La comunicación frontend-backend es REST (JSON) + SSE para realtime. OpenAPI/Utoipa (ADR 0016) genera la documentación de la API. No se usa ConnectRPC ni gRPC.
 
 ---
 
 # Estrategia realtime
 
 ```text
-Agente
+Agente (sedes)
    ↓
-Axum
+Axum API (apps/api)
    ↓
-Apalis procesa métricas
+Apalis procesa métricas (crates/jobs)
    ↓
-SSE emite actualización
+PostgreSQL almacena
    ↓
-Dashboard actualiza gráficos
+SSE emite actualización (endpoint /api/v1/stream)
+   ↓
+Dashboard SvelteKit actualiza gráficos
 ```
 
 ---
 
-# Estrategia offline
+# Estrategia offline (Local-First)
 
-* SQLite Wasm local
-* sync queue
-* caché de métricas recientes
-* dashboards parcialmente offline
+> **Referencia:** ADR 0021
+
+* SQLite Wasm en browser (cache local de lectura)
+* Sync queue para acciones pendientes (IndexedDB)
+* Reconciliación cuando vuelve la conexión
+* Dashboard parcialmente funcional sin internet
+* Métricas recientes cacheadas localmente
 
 ---
 
@@ -380,12 +510,20 @@ Dashboard actualiza gráficos
 ```text
 sedes
 devices
-device_links
+device_links          -- conexiones entre dispositivos
+device_whitelist      -- MACs aprobadas
 metric_readings
+metric_aggregations   -- rollup por hora/día (jobs)
 alerts
 intrusion_events
 audit_logs
-network_snapshots
+sessions
+tokens                -- verificación email + reset password
+users
+roles
+permissions
+role_permissions
+user_roles
 ```
 
 ---
@@ -394,10 +532,12 @@ network_snapshots
 
 | Tipo de dato      | Estrategia             |
 | ----------------- | ---------------------- |
-| Inventario        | Persistente            |
-| Métricas realtime | Time-series            |
-| Alertas           | Persistente            |
-| Logs              | Retención configurable |
+| Inventario        | Persistente (PostgreSQL) |
+| Métricas realtime | Time-series (PostgreSQL) |
+| Alertas           | Persistente (PostgreSQL) |
+| Logs              | Retención configurable (PostgreSQL) |
+| Cache frontend    | SQLite Wasm (Local-First) |
+| Sync queue        | IndexedDB (browser) |
 
 ---
 
@@ -409,6 +549,7 @@ network_snapshots
 | Métricas agregadas | 1 año      |
 | Alertas            | Permanente |
 | Auditoría          | Permanente |
+| Intrusiones        | Permanente |
 
 ---
 
@@ -422,12 +563,13 @@ Recolectar métricas desde sedes remotas.
 
 ## Capacidades
 
-* heartbeat
-* métricas SNMP
-* escaneo ARP
-* monitoreo ICMP
-* detección de dispositivos
-* buffering offline
+* heartbeat periódico al API
+* métricas SNMP (switches, routers)
+* escaneo ARP (detección de dispositivos)
+* monitoreo ICMP (latencia, packet loss)
+* detección de dispositivos nuevos
+* buffering offline (almacena localmente si sin conexión)
+* sync automático al reconectar
 
 ---
 
@@ -436,11 +578,13 @@ Recolectar métricas desde sedes remotas.
 ```text
 Sede sin internet
    ↓
-Agente almacena localmente
+Agente almacena métricas localmente (SQLite/file)
    ↓
 Reconexión
    ↓
-Sync automático
+Sync automático vía API (batch insert)
+   ↓
+Confirmación de recepción
 ```
 
 ---
@@ -449,24 +593,26 @@ Sync automático
 
 ## Reglas obligatorias
 
-* RBAC institucional
-* auditoría obligatoria
-* PASETO auth
-* rate limiting
-* cifrado TLS
-* logs firmados
+* RBAC institucional (ADR 0006)
+* auditoría obligatoria (ADR 0006)
+* PASETO v4 auth (ADR 0008) — JWT prohibido
+* rate limiting (ADR 0009)
+* cifrado TLS (HTTPS)
+* logs firmados (opcional)
 * detección de anomalías
 
 ---
 
 # Roles RBAC
 
-| Rol          | Permisos         |
-| ------------ | ---------------- |
-| SuperAdmin   | Acceso total     |
-| Auditor      | Solo lectura     |
-| NetworkAdmin | Gestión técnica  |
-| Operador     | Monitoreo básico |
+| Rol       | Permisos         |
+| --------- | ---------------- |
+| Admin     | Acceso total     |
+| Operator  | Lectura + ack alerts + write intrusions |
+| Viewer    | Solo lectura     |
+| Agent     | Write metrics + read devices (para apps/agent) |
+
+**Nota:** Alineado con ADR 0006. Los permisos se definen como "recurso:acción" (ej: "devices:read", "alerts:write").
 
 ---
 
@@ -475,11 +621,14 @@ Sync automático
 Toda acción crítica genera log:
 
 ```text
-usuario
-acción
-IP
+user_id
+action (ej: device_created, alert_acknowledged)
+resource (ej: devices, alerts)
+resource_id
+details (JSON)
+ip_address
+user_agent
 timestamp
-antes/después
 ```
 
 ---
@@ -491,18 +640,19 @@ antes/después
 * PDF
 * CSV
 * JSON
-* snapshots históricos
+* snapshots históricos de topología
 
 ---
 
 ## Reportes disponibles
 
 * consumo por secretaría
-* disponibilidad mensual
+* disponibilidad mensual (uptime %)
 * incidentes críticos
 * topología actual
 * inventario institucional
 * intrusiones detectadas
+* métricas agregadas por período
 
 ---
 
@@ -510,12 +660,13 @@ antes/después
 
 ## Jobs
 
-| Job                     | Función                       |
-| ----------------------- | ----------------------------- |
-| `MetricsAggregationJob` | Agregación histórica          |
-| `IntrusionDetectionJob` | Análisis de anomalías         |
-| `AlertDispatchJob`      | Envío de alertas              |
-| `CleanupMetricsJob`     | Limpieza de métricas antiguas |
+| Job                     | Función                       | Frecuencia |
+| ----------------------- | ----------------------------- | ---------- |
+| `MetricsAggregationJob` | Agregación histórica (hourly/daily) | Cada hora |
+| `IntrusionDetectionJob` | Análisis de anomalías y whitelist | Cada 5 min |
+| `AlertDispatchJob`      | Envío de alertas por email      | On-demand (event-driven) |
+| `CleanupMetricsJob`     | Limpieza de métricas crudas > 30 días | Diario |
+| `SyncOfflineJob`        | Procesar sync_queue de sedes offline | Cada 2 min |
 
 ---
 
@@ -533,18 +684,20 @@ antes/después
 
 # Herramientas y Librerías para Optimizar (Edición 2026)
 
-| Herramienta  | Propósito                 |
-| ------------ | ------------------------- |
-| `snmp`       | Recolección SNMP          |
-| `surge-ping` | ICMP async                |
-| `pcap`       | Captura de tráfico        |
-| `LayerChart` | Visualización realtime    |
-| `netdev`     | Información de interfaces |
-| `tokio`      | Concurrencia async        |
-| `Apalis`     | Procesamiento background  |
-| `SSE`        | Streaming eficiente       |
-| `tracing`    | Observabilidad            |
-| `sentry`     | Monitoreo de errores      |
+| Herramienta  | Propósito                 | Crate/Package |
+| ------------ | ------------------------- | ------------- |
+| `snmp`       | Recolección SNMP          | crates/snmp |
+| `surge-ping` | ICMP async                | crates/snmp |
+| `tokio`      | Concurrencia async        | workspace |
+| `Apalis`     | Procesamiento background  | crates/jobs |
+| `SSE`        | Streaming eficiente       | apps/api |
+| `tracing`    | Observabilidad            | workspace |
+| `sentry`     | Monitoreo de errores      | apps/api |
+| `LayerChart` | Visualización realtime    | apps/web |
+| `sqlx`       | PostgreSQL queries        | crates/database |
+| `pasetors`   | PASETO v4 tokens          | crates/auth |
+| `argon2`     | Password hashing          | crates/auth |
+| `utoipa`     | OpenAPI generation        | crates/infrastructure |
 
 ---
 
@@ -556,9 +709,10 @@ antes/después
 * Detección temprana de incidentes
 * Inventario centralizado
 * Auditoría institucional
-* Realtime eficiente
-* Operación tolerante a conectividad inestable
+* Realtime eficiente (SSE)
+* Operación tolerante a conectividad inestable (Local-First)
 * Integración natural con el stack Rust/Svelte
+* VPS-friendly (bajo consumo RAM)
 
 ---
 
@@ -570,9 +724,9 @@ Cada sede necesita algún mecanismo de captura.
 
 → Mitigación:
 
-* agentes ultra ligeros
-* buffering offline
-* despliegue automatizado
+* agentes ultra ligeros (Rust, < 10MB RAM)
+* buffering offline automático
+* despliegue automatizado vía Coolify (ADR 0019)
 
 ---
 
@@ -582,8 +736,9 @@ El almacenamiento de time-series aumenta con el tiempo.
 
 → Mitigación:
 
-* agregación histórica
-* retención automática
+* agregación histórica automática (Apalis jobs)
+* retención automática (30 días crudas, 1 año agregadas)
+* particionamiento por rango en PostgreSQL (opcional)
 * compactación periódica
 
 ---
@@ -594,19 +749,23 @@ ARP/SNMP pueden no detectar todos los casos.
 
 → Mitigación:
 
-* múltiples fuentes de detección
+* múltiples fuentes de detección (ARP + SNMP + ICMP + DHCP)
 * correlación de eventos
 * alertas heurísticas
+* whitelist institucional mantenida por admin
 
 ---
 
 # Decisiones derivadas
 
-* SSE es preferido sobre WebSockets
-* Todos los dispositivos tienen `updated_at`
-* El dashboard funciona parcialmente offline
-* Las métricas críticas se agregan vía Apalis
-* RBAC es obligatorio para vistas técnicas
-* El sistema debe tolerar sedes sin internet temporalmente
-* SQLite sigue siendo la base oficial del proyecto
-* El monitoreo está diseñado para VPS pequeños y bajo consumo RAM
+* **SSE es preferido sobre WebSockets** — más simple, compatible con HTTP infraestructura existente, mejor para firewalls institucionales
+* **Todos los dispositivos tienen `updated_at` y `deleted_at`** — Soft Delete obligatorio (ADR 0006)
+* **El dashboard funciona parcialmente offline** — Local-First via SQLite Wasm + sync queue (ADR 0021)
+* **Las métricas críticas se agregan vía Apalis jobs** — no en tiempo real, para no saturar DB
+* **RBAC es obligatorio para vistas técnicas** — sin permiso no hay acceso a datos sensibles
+* **El sistema debe tolerar sedes sin internet temporalmente** — agentes buffer + sync diferido
+* **PostgreSQL es la base de datos principal del backend** — SQLite solo para Local-First en browser (ADR 0004, ADR 0021)
+* **El monitoreo está diseñado para VPS pequeños y bajo consumo RAM** — Rust + PostgreSQL optimizado
+* **PASETO v4 es el único método de autenticación** — JWT prohibido (ADR 0008)
+* **Rate limiting en todos los endpoints de auth** — protección contra brute force (ADR 0009)
+* **Soft delete en todas las entidades persistentes** — nunca DELETE físico (ADR 0006)

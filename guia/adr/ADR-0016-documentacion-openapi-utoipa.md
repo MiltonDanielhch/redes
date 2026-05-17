@@ -3,8 +3,9 @@
 | Campo               | Valor                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                               |
-| **Fecha**           | 2026                                                                                                                     |
+| **Fecha**           | 2026-05-16                                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                         |
+| **Versión**         | 2.0 (Corrección 2026)                                                                                                    |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
@@ -37,10 +38,12 @@ Necesitamos una solución que:
 
 Usar:
 
-* **Utoipa** para generación automática de OpenAPI
-* **Scalar** como interfaz visual moderna
+* **Utoipa v5** para generación automática de OpenAPI
+* **Scalar v0.3** como interfaz visual moderna
 * `/openapi.json` como contrato oficial IA-ready
 * Macros exclusivamente en infraestructura
+* **`time` feature** (no `chrono`) para consistencia con el stack del proyecto
+* **`openapi-typescript`** (no `openapi-typescript-codegen`) para generación de tipos frontend
 
 La arquitectura sigue:
 
@@ -78,19 +81,24 @@ Scalar UI / IA / Frontend codegen
 
 [dependencies]
 utoipa = {
-    version = "4",
+    version = "5",
     features = [
         "axum_extras",
         "uuid",
-        "chrono",
+        "time",
     ]
 }
 
 utoipa-scalar = {
-    version = "0.1",
+    version = "0.3",
     features = ["axum"]
 }
+
+# Opcional: bindings nativos Axum para Utoipa v5
+utoipa-axum = "0.2"
 ```
+
+**Nota de versión (2026):** El proyecto utiliza `time` (no `chrono`) en todo el dominio y las entidades (ADR 0002, ADR 0020). Utoipa v5 soporta `time` nativamente vía feature flag. Se elimina `chrono` para evitar dependencias duplicadas.
 
 ---
 
@@ -233,8 +241,29 @@ use utoipa_scalar::{Scalar, Servable};
         auth_handler::logout,
         auth_handler::refresh,
 
-        network_handler::list_devices,
-        network_handler::device_metrics,
+        sede_handler::list_sedes,
+        sede_handler::create_sede,
+
+        device_handler::list_devices,
+        device_handler::create_device,
+        device_handler::get_device,
+        device_handler::archive_device,
+        device_handler::get_device_metrics,
+
+        metrics_handler::list_metrics,
+        metrics_handler::ingest_metrics,
+
+        alert_handler::list_alerts,
+        alert_handler::acknowledge_alert,
+        alert_handler::resolve_alert,
+
+        topology_handler::get_topology,
+
+        intrusion_handler::list_intrusions,
+        intrusion_handler::resolve_intrusion,
+
+        agent_handler::list_agents,
+        agent_handler::restart_agent,
     ),
 
     components(
@@ -244,6 +273,29 @@ use utoipa_scalar::{Scalar, Servable};
 
             LoginRequest,
             AuthResponse,
+
+            SedeDto,
+            CreateSedeRequest,
+
+            DeviceDto,
+            CreateDeviceRequest,
+            DeviceMetricsResponse,
+
+            MetricReadingDto,
+            MetricIngestRequest,
+
+            AlertDto,
+            AcknowledgeAlertRequest,
+
+            TopologyGraphDto,
+            TopologyNodeDto,
+            TopologyEdgeDto,
+
+            IntrusionEventDto,
+            ResolveIntrusionRequest,
+
+            AgentDto,
+            AgentConfigRequest,
 
             ErrorResponse,
             ValidationError,
@@ -264,8 +316,38 @@ use utoipa_scalar::{Scalar, Servable};
         ),
 
         (
-            name = "network",
-            description = "Monitoreo de red"
+            name = "sedes",
+            description = "Sedes regionales del Beni"
+        ),
+
+        (
+            name = "devices",
+            description = "Inventario de dispositivos de red"
+        ),
+
+        (
+            name = "metrics",
+            description = "Métricas de red y rendimiento"
+        ),
+
+        (
+            name = "alerts",
+            description = "Alertas y anomalías detectadas"
+        ),
+
+        (
+            name = "topology",
+            description = "Topología de red por sede"
+        ),
+
+        (
+            name = "intrusions",
+            description = "Detección de dispositivos no autorizados"
+        ),
+
+        (
+            name = "agents",
+            description = "Agentes de monitoreo distribuidos"
         )
     ),
 
@@ -274,11 +356,13 @@ use utoipa_scalar::{Scalar, Servable};
 
         version = env!("CARGO_PKG_VERSION"),
 
-        description = "API de monitoreo de red del sistema de la Gobernación del Beni"
+        description = "API de monitoreo de infraestructura de red del sistema de la Gobernación del Beni"
     )
 )]
 pub struct ApiDoc;
 ```
+
+**Tags de monitoreo (ADR 0020):** Se registran explícitamente `sedes`, `devices`, `metrics`, `alerts`, `topology`, `intrusions` y `agents` como tags de primer nivel en el contrato OpenAPI. Esto garantiza que el spec refleje fielmente el dominio del módulo de monitoreo regional.
 
 ---
 
@@ -398,27 +482,24 @@ El archivo `/openapi.json` permite:
 
 # Frontend Type-Safe
 
-## Generación automática de cliente TS
+## Generación automática de tipos TypeScript
 
 ```bash id="m4f1dz"
-pnpm add openapi-typescript-codegen
+pnpm add -D openapi-typescript
 ```
 
 ```bash id="0n1d7z"
-openapi \
-  --input http://localhost:8080/openapi.json \
-  --output apps/web/src/lib/api
+npx openapi-typescript   http://localhost:8080/openapi.json   --output apps/web/src/lib/generated/api-types.ts
 ```
 
 Resultado:
 
 ```text id="v2r8xk"
-apps/web/src/lib/api/
- ├─ core/
- ├─ models/
- ├─ services/
- └─ index.ts
+apps/web/src/lib/generated/
+ └─ api-types.ts    # Tipos TypeScript puros, sin runtime overhead
 ```
+
+**Nota (2026):** Se utiliza `openapi-typescript` en lugar de `openapi-typescript-codegen`. Esta herramienta genera tipos TypeScript puros (interfaces y tipos) sin clases de runtime ni dependencias de cliente, lo cual es ideal para integrarse con TanStack Query, Svelte 5 Runes y `fetch` nativo en el frontend (ADR 0017).
 
 ---
 
@@ -435,7 +516,7 @@ apps/web/src/lib/api/
     curl -f http://localhost:8080/openapi.json
 
 - name: Lint OpenAPI
-  run: spectral lint openapi.json
+  run: npx @stoplight/spectral-cli lint openapi.json
 ```
 
 ---
@@ -447,7 +528,7 @@ pnpm add -D @stoplight/spectral-cli
 ```
 
 ```bash id="w7p7ry"
-spectral lint openapi.json
+npx spectral lint openapi.json
 ```
 
 Permite validar:
@@ -477,12 +558,19 @@ Permite validar:
 
 | Herramienta                      | Propósito                          |
 | -------------------------------- | ---------------------------------- |
-| **`utoipa-redoc`**               | Alternativa UI moderna             |
-| **`openapi-typescript-codegen`** | SDK TypeScript automático          |
-| **`spectral`**                   | Linter OpenAPI                     |
-| **`cargo-udeps`**                | Detectar dependencias innecesarias |
-| **`scalar`**                     | Exploración moderna                |
 | **`utoipa`**                     | Generación automática del spec     |
+| **`utoipa-scalar`**              | Interfaz visual moderna            |
+| **`utoipa-axum`**                | Bindings nativos Axum para Utoipa  |
+| **`openapi-typescript`**         | Tipos TypeScript puros desde OpenAPI |
+| **`@stoplight/spectral-cli`**    | Linter OpenAPI                     |
+| **`cargo-udeps`**                | Detectar dependencias innecesarias |
+
+**Cambios respecto a v1.0:**
+- `utoipa` actualizado a v5 (estable 2026)
+- `utoipa-scalar` actualizado a v0.3 (estable 2026)
+- Se agrega `utoipa-axum` v0.2 para bindings nativos con Axum 0.8
+- `openapi-typescript` reemplaza a `openapi-typescript-codegen` (más ligero, sin runtime)
+- Se elimina `chrono` de las features; se usa `time` (consistencia con ADR 0002 y ADR 0020)
 
 ---
 
@@ -594,7 +682,17 @@ Exponer endpoints internos accidentalmente.
 * `/docs` solo en development/staging
 * `/openapi.json` disponible siempre
 * PASETO se documenta explícitamente
-* El frontend genera tipos desde OpenAPI
+* El frontend genera tipos desde OpenAPI con `openapi-typescript`
 * Las macros viven solo en infraestructura
 * `spectral lint` corre en CI
 * `openapi.json` es parte del contrato oficial del sistema
+* Los tags de monitoreo (`sedes`, `devices`, `metrics`, `alerts`, `topology`, `intrusions`, `agents`) son de primer nivel en el spec
+
+---
+
+# Historial de cambios
+
+| Versión | Fecha       | Cambios realizados |
+| ------- | ----------- | ------------------ |
+| 1.0     | 2026 (orig) | Versión inicial con utoipa v4, chrono, openapi-typescript-codegen |
+| 2.0     | 2026-05-16  | Actualiza a utoipa v5, utoipa-scalar v0.3; reemplaza chrono por time; reemplaza openapi-typescript-codegen por openapi-typescript; agrega tags de monitoreo ADR 0020; agrega utoipa-axum v0.2 |

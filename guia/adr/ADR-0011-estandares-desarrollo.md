@@ -3,13 +3,14 @@
 | Campo               | Valor                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                               |
-| **Fecha**           | 2026-05-15                                                                                                               |
+| **Fecha**           | 2026-05-16                                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                         |
-| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0010 (Testing), ADR 0012 (just + lefthook), ADR 0013 (Deploy) |
+| **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0010 (Testing), ADR 0012 (just + lefthook), ADR 0013 (Deploy), ADR 0018 (Sintonía CLI) |
+| **Última revisión** | 2026-05-16 — Alineación de herramientas con roadmap + versiones actualizadas |
 
 ---
 
-# Contexto
+## Contexto
 
 El desarrollo de software tiende a degradarse con el tiempo por:
 
@@ -38,7 +39,7 @@ El objetivo es que:
 
 ---
 
-# Decisión
+## Decisión
 
 Se adopta oficialmente el modelo:
 
@@ -56,11 +57,11 @@ La prioridad arquitectónica es:
 4. observabilidad
 5. automatización
 
-antes que “enterprise patterns” innecesarios.
+antes que "enterprise patterns" innecesarios.
 
 ---
 
-# 1 — Restricciones de atomicidad
+## 1 — Restricciones de atomicidad
 
 ## Límites estructurales
 
@@ -90,7 +91,7 @@ El tamaño controlado:
 
 ## Regla del Boy Scout
 
-> “Siempre deja el código un poco más limpio de como lo encontraste.”
+> "Siempre deja el código un poco más limpio de como lo encontraste."
 
 Cada commit debe:
 
@@ -103,7 +104,7 @@ aunque el cambio principal sea otro.
 
 ---
 
-# 2 — Ciclo oficial de desarrollo
+## 2 — Ciclo oficial de desarrollo
 
 ---
 
@@ -140,15 +141,21 @@ antes de commit.
 
 ## Herramientas recomendadas
 
-| Herramienta   | Uso                      |
-| ------------- | ------------------------ |
-| `bacon`       | feedback en tiempo real  |
-| `cargo-watch` | recompilación automática |
-| `just`        | comandos reproducibles   |
-| `nextest`     | tests paralelos          |
-| `clippy`      | linting estricto         |
-| `typos`       | corrección ortográfica   |
-| `cargo-deny`  | auditoría dependencias   |
+| Herramienta   | Uso                      | Versión mínima | Estado |
+| ------------- | ------------------------ | --------------- | ------ |
+| `bacon`       | feedback en tiempo real  | 3.22.0          | ✅ Activa |
+| `cargo-watch` | recompilación automática | 8.5.3           | 🟡 Legacy — usar `bacon` |
+| `just`        | comandos reproducibles   | 1.40            | ✅ Activa |
+| `nextest`     | tests paralelos          | 0.9.135         | ✅ Activa |
+| `clippy`      | linting estricto         | (via toolchain) | ✅ Activa |
+| `typos`       | corrección ortográfica   | 1.46.1          | ✅ Activa |
+| `cargo-deny`  | auditoría dependencias   | 0.18            | ✅ Activa |
+| `cargo-audit` | vulnerabilidades         | 0.21            | ✅ Activa |
+
+**Notas:**
+- `bacon` reemplaza a `cargo-watch` — mejor UX y soporte Rust 2024
+- `cargo-mutants` requiere Rust 1.88+ — **postergado hasta actualizar toolchain**
+- `cargo-llvm-cov` opcional para cobertura visual
 
 ---
 
@@ -173,8 +180,8 @@ cargo nextest run --all-targets
 cargo clippy --all-targets -- -D warnings
 cargo deny check
 cargo audit
-just prepare
-just types-check
+just prepare          # SQLx offline query verification
+just types-check      # TypeScript/OpenAPI sync verification (ADR 0016)
 ```
 
 ---
@@ -184,11 +191,11 @@ just types-check
 El CI debe fallar si:
 
 * existe un warning
-* `.sqlx/` está desactualizado
-* hay dependencias vulnerables
-* existe drift en tipos TS
+* `.sqlx/` está desactualizado (queries SQLx no verificadas)
+* hay dependencias vulnerables (`cargo audit` falla)
+* existe drift en tipos TS vs OpenAPI (`just types-check` falla)
 * falla cualquier test
-* se rompe la arquitectura
+* se rompe la arquitectura (domain importa sqlx/axum)
 
 ---
 
@@ -237,23 +244,29 @@ Toda request debe tener:
 
 ---
 
-# 3 — Código autodocumentado
+## 3 — Código autodocumentado
 
 ## Regla principal
 
 Los comentarios deben explicar:
 
-* el “por qué”
+* el "por qué"
 * la decisión de negocio
 * la razón arquitectónica
 
-NO el “cómo”.
+NO el "cómo".
 
 ---
 
 ## Ejemplo correcto
 
 ```rust
+//! Ubicación: `crates/domain/src/entities/user.rs`
+//!
+//! Descripción: Entidad User con Soft Delete (ADR 0006).
+//!
+//! ADRs: 0006, 0011
+
 // Soft Delete preserva audit_logs históricos (ADR 0006)
 user.soft_delete();
 ```
@@ -263,17 +276,23 @@ user.soft_delete();
 ## Ejemplo incorrecto
 
 ```rust
-// Iterar usuarios y filtrar activos
-users.iter().filter(...)
+// Iterar usuarios y filtrar activos — el CÓMO es obvio del código
+users.iter().filter(|u| u.is_active())
 ```
 
 ---
 
-# 4 — Tipos fuertes sobre primitivas
+## 4 — Tipos fuertes sobre primitivas
 
 ## Incorrecto
 
 ```rust
+//! Ubicación: `crates/application/src/use_cases/create_user.rs`
+//!
+//! Descripción: Ejemplo ANTI-PATRÓN — primitivas en lugar de newtypes.
+//!
+//! ADRs: 0011
+
 fn create_user(id: String, role: String)
 ```
 
@@ -282,12 +301,18 @@ fn create_user(id: String, role: String)
 ## Correcto
 
 ```rust
+//! Ubicación: `crates/application/src/use_cases/create_user.rs`
+//!
+//! Descripción: Ejemplo correcto — newtypes para dominio tipado.
+//!
+//! ADRs: 0011, 0001
+
 fn create_user(id: UserId, role: UserRole)
 ```
 
 ---
 
-# 5 — Filosofía de dependencias
+## 5 — Filosofía de dependencias
 
 ## Regla
 
@@ -315,7 +340,7 @@ Agregar librerías para problemas triviales.
 
 ---
 
-# 6 — Convenciones para IA
+## 6 — Convenciones para IA
 
 El proyecto está diseñado explícitamente para colaboración humano + IA.
 
@@ -326,13 +351,25 @@ El proyecto está diseñado explícitamente para colaboración humano + IA.
 ### Nombres explícitos
 
 ```rust
+//! Ubicación: `crates/application/src/use_cases/create_user_use_case.rs`
+//!
+//! Descripción: Caso de uso para creación de usuarios.
+//!
+//! ADRs: 0011
+
+// CORRECTO: nombre explícito
 create_user_use_case.rs
 sqlite_user_repository.rs
 ```
 
-NO:
-
 ```rust
+//! Ubicación: `crates/application/src/helpers.rs`
+//!
+//! Descripción: ANTI-PATRÓN — nombre genérico.
+//!
+//! ADRs: 0011
+
+// INCORRECTO: nombre genérico
 service.rs
 helpers.rs
 utils.rs
@@ -357,11 +394,11 @@ cuando aplique.
 
 ### Un concepto por archivo
 
-Evita archivos “multi-propósito”.
+Evita archivos "multi-propósito".
 
 ---
 
-# 7 — Política de complejidad operacional
+## 7 — Política de complejidad operacional
 
 Con un servidor físico potente propio:
 
@@ -377,7 +414,7 @@ Quedan despriorizados:
 
 * multi-node premature scaling
 * Kubernetes
-* Redis “porque sí”
+* Redis "porque sí"
 * microservicios
 * service mesh
 * colas distribuidas innecesarias
@@ -386,11 +423,11 @@ Quedan despriorizados:
 
 ## Principio
 
-> “La complejidad operacional es deuda técnica.”
+> "La complejidad operacional es deuda técnica."
 
 ---
 
-# 8 — Comparativa SDLC
+## 8 — Comparativa SDLC
 
 | Métrica         | Tradicional       | Laboratorio 3030   |
 | --------------- | ----------------- | ------------------ |
@@ -404,27 +441,27 @@ Quedan despriorizados:
 
 ---
 
-# Herramientas y Librerías Recomendadas (Edición 2026)
+## Herramientas y Librerías Recomendadas (Edición 2026)
 
-| Herramienta        | Propósito                   |
-| ------------------ | --------------------------- |
-| `bacon`            | Feedback loop ultra-rápido  |
-| `cargo-nextest`    | Testing paralelo            |
-| `cargo-deny`       | Auditoría de supply chain   |
-| `cargo-audit`      | Vulnerabilidades conocidas  |
-| `cargo-llvm-cov`   | Cobertura                   |
-| `cargo-mutants`    | Mutation testing            |
-| `typos`            | Calidad textual             |
-| `clippy::pedantic` | Lints avanzados             |
-| `just`             | Automatización reproducible |
-| `lefthook`         | Enforcement local           |
-| `tracing`          | Observabilidad estructurada |
+| Herramienta        | Propósito                   | Versión mínima | Estado |
+| ------------------ | --------------------------- | --------------- | ------ |
+| `bacon`            | Feedback loop ultra-rápido  | 3.22.0          | ✅ Activa |
+| `cargo-nextest`    | Testing paralelo            | 0.9.135         | ✅ Activa |
+| `cargo-deny`       | Auditoría de supply chain   | 0.18            | ✅ Activa |
+| `cargo-audit`      | Vulnerabilidades conocidas  | 0.21            | ✅ Activa |
+| `cargo-llvm-cov`   | Cobertura                   | 0.6.16          | 🟡 Opcional |
+| `cargo-mutants`    | Mutation testing            | 27.0.0          | ⏳ Requiere Rust 1.88+ |
+| `typos`            | Calidad textual             | 1.46.1          | ✅ Activa |
+| `clippy::pedantic` | Lints avanzados             | (toolchain)     | ✅ Activa |
+| `just`             | Automatización reproducible | 1.40            | ✅ Activa |
+| `lefthook`         | Enforcement local           | 1.11            | ✅ Activa |
+| `tracing`          | Observabilidad estructurada | (workspace)     | ✅ Activa |
 
 ---
 
-# Consecuencias
+## Consecuencias
 
-## ✅ Positivas
+### ✅ Positivas
 
 * Arquitectura extremadamente mantenible
 * Feedback loop muy corto
@@ -434,21 +471,19 @@ Quedan despriorizados:
 * Código altamente navegable
 * Menor riesgo de sobreingeniería
 
----
+### ⚠️ Negativas / Trade-offs
 
-## ⚠️ Negativas / Trade-offs
-
-### Mayor disciplina requerida
+**Mayor disciplina requerida**
 
 El minimalismo exige:
 
 * borrar código innecesario
 * resistir abstracciones prematuras
-* evitar “future-proofing” innecesario
+* evitar "future-proofing" innecesario
 
 ---
 
-### Más archivos pequeños
+**Más archivos pequeños**
 
 Puede aumentar cantidad de archivos.
 
@@ -460,7 +495,7 @@ Mitigación:
 
 ---
 
-### Lints estrictos generan fricción inicial
+**Lints estrictos generan fricción inicial**
 
 Mitigación:
 
@@ -471,7 +506,7 @@ Mitigación:
 
 ---
 
-# Decisiones derivadas
+## Decisiones derivadas
 
 * `cargo clippy -D warnings` obligatorio en CI
 * `cargo fmt --check` obligatorio antes de merge
@@ -480,3 +515,5 @@ Mitigación:
 * Los ADRs son la fuente oficial de decisiones técnicas
 * La simplicidad operacional tiene prioridad sobre escalabilidad prematura
 * Todo componente nuevo debe justificar su existencia arquitectónica
+* `bacon` es la herramienta oficial de feedback loop (reemplaza `cargo-watch`)
+* `cargo-mutants` se habilita cuando el toolchain alcance Rust 1.88+

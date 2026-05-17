@@ -3,13 +3,14 @@
 | Campo               | Valor                                                                                                                          |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                                     |
-| **Fecha**           | 2026                                                                                                                           |
+| **Fecha**           | 2026-05-16                                                                                                                     |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                               |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0004 (PostgreSQL + SQLx), ADR 0008 (PASETO + Auth), ADR 0015 (Monitoreo) |
+| **Última revisión** | 2026-05-16 — Actualización de versiones + configuración nextest |
 
 ---
 
-# Contexto
+## Contexto
 
 Sin una estrategia clara de testing, los proyectos terminan dependiendo únicamente de tests E2E lentos y frágiles.
 
@@ -31,7 +32,7 @@ Necesitamos una estrategia que:
 
 ---
 
-# Decisión
+## Decisión
 
 Adoptar una estrategia de **4 capas de testing**, donde cada capa valida una responsabilidad específica del sistema.
 
@@ -46,46 +47,78 @@ La arquitectura de testing queda dividida en:
 
 El runner oficial del proyecto será:
 
-```bash id="h6m4yi"
-cargo-nextest
+```bash
+cargo install cargo-nextest --locked
 ```
+
+**Versión mínima:** 0.9.135 (mayo 2026)
 
 ---
 
-# Dependencias base
+## Dependencias base
 
-```toml id="upg9mg"
+```toml
 # Cargo.toml (workspace)
 
 [workspace.dev-dependencies]
 
-tokio      = { version = "1", features = ["test", "macros"] }
-mockall    = "0.13"
-reqwest    = { version = "0.12", features = ["json"] }
+tokio      = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+mockall    = "0.13.1"
+reqwest    = { version = "0.12", features = ["json", "cookies"] }
 httpmock   = "0.7"
-insta      = "1"
-proptest   = "1"
+insta      = "1.46"
+proptest   = "1.9"
+fake       = { version = "3.0", features = ["derive", "chrono", "uuid"] }
+sqlx       = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "migrate"] }
 ```
+
+**Notas de versión:**
+- `tokio`: feature `"test"` deprecado, usar `"rt-multi-thread"` + `"macros"`
+- `cargo-nextest`: instalar siempre con `--locked` para evitar incompatibilidades
+- `fake`: generación de datos de prueba (emails, nombres, UUIDs)
 
 ---
 
-# Runner oficial
+## Runner oficial
 
-```bash id="0v0bf0"
-cargo install cargo-nextest
+```bash
+cargo install cargo-nextest --locked
+# o en CI:
+# uses: taiki-e/install-action@nextest
 ```
 
 Ventajas:
 
 * paralelismo real
 * mejor output
-* retries automáticos
+* retries automáticos (configurable)
 * aislamiento entre tests
 * 3–5x más rápido que `cargo test`
+* soporte para benchmarks (experimental)
+* grabación y replay de test runs
 
 ---
 
-# Capa 1 — Tests Unitarios de Dominio
+## Configuración de perfiles (`.config/nextest.toml`)
+
+```toml
+[profile.default]
+retries = 0
+slow-timeout = { period = "60s", terminate-after = 2 }
+
+[profile.ci]
+retries = 2
+slow-timeout = { period = "120s", terminate-after = 2 }
+test-threads = "num-cpus"
+
+[profile.e2e]
+test-threads = 2          # E2E no paraleliza tanto (comparten DB)
+slow-timeout = { period = "300s", terminate-after = 1 }
+```
+
+---
+
+## Capa 1 — Tests Unitarios de Dominio
 
 ## Objetivo
 
@@ -103,8 +136,12 @@ Validar reglas de negocio puras.
 
 ## Ejemplo
 
-```rust id="i2f8xe"
-// crates/domain/src/value_objects/email.rs
+```rust
+//! Ubicación: `crates/domain/src/value_objects/email.rs`
+//!
+//! Descripción: Tests unitarios de dominio — reglas puras de negocio.
+//!
+//! ADRs: 0010, 0001
 
 #[cfg(test)]
 mod tests {
@@ -152,7 +189,7 @@ mod tests {
 
 ---
 
-# Capa 2 — Tests de Aplicación con Mocks
+## Capa 2 — Tests de Aplicación con Mocks
 
 ## Objetivo
 
@@ -169,8 +206,12 @@ Validar casos de uso y flujo de aplicación.
 
 ## Ejemplo
 
-```rust id="b3xjlwm"
-// crates/application/src/use_cases/auth/register.rs
+```rust
+//! Ubicación: `crates/application/src/use_cases/auth/register.rs`
+//!
+//! Descripción: Tests de aplicación con mocks — valida orquestación de casos de uso.
+//!
+//! ADRs: 0010, 0001
 
 #[cfg(test)]
 mod tests {
@@ -248,7 +289,7 @@ mod tests {
 
 ---
 
-# Capa 3 — Tests de Integración
+## Capa 3 — Tests de Integración
 
 ## Objetivo
 
@@ -262,49 +303,32 @@ Validar:
 
 ---
 
-# Base de datos de testing
+## Base de datos de testing
 
 Para integración se usa PostgreSQL aislado para reproducir el entorno real.
 
-Opciones válidas:
+Opciones válidas (en orden de preferencia):
 
-* PostgreSQL local
-* Docker temporal
-* `testcontainers`
-* CI service container
-
----
-
-## Setup recomendado
-
-```rust id="l3uv2f"
-async fn setup_test_db() -> PgPool {
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&std::env::var("TEST_DATABASE_URL").unwrap())
-        .await
-        .expect("failed to connect test database");
-
-    sqlx::migrate!("../../data/migrations")
-        .run(&pool)
-        .await
-        .expect("failed migrations");
-
-    pool
-}
-```
+1. **`sqlx test`** — macro `#[sqlx::test]` que crea DB temporal por test (recomendado)
+2. **PostgreSQL local** — `TEST_DATABASE_URL` apuntando a DB dedicada
+3. **Docker temporal** — script que levanta PostgreSQL en puerto efímero
+4. **`testcontainers`** — para CI cuando Docker está disponible
 
 ---
 
-## Ejemplo
+## Setup recomendado (sqlx test)
 
-```rust id="1gvjng"
-// crates/database/tests/user_repository_test.rs
+```rust
+//! Ubicación: `crates/database/tests/user_repository_test.rs`
+//!
+//! Descripción: Tests de integración con PostgreSQL real via sqlx::test.
+//!
+//! ADRs: 0010, 0004
 
-#[tokio::test]
-async fn guardar_y_recuperar_usuario() {
-    let pool = setup_test_db().await;
+use sqlx::PgPool;
 
+#[sqlx::test]
+async fn guardar_y_recuperar_usuario(pool: PgPool) {
     let repo = PostgresUserRepository::new(
         Arc::new(pool)
     );
@@ -324,9 +348,11 @@ async fn guardar_y_recuperar_usuario() {
 }
 ```
 
+**Nota:** `#[sqlx::test]` requiere feature `"migrate"` en `sqlx`. Crea una DB temporal por test, aplica migraciones automáticamente, y la limpia al final.
+
 ---
 
-# Capa 4 — Tests End-to-End (E2E)
+## Capa 4 — Tests End-to-End (E2E)
 
 ## Objetivo
 
@@ -346,8 +372,13 @@ Incluye:
 
 ## Ejemplo
 
-```rust id="r8h4zv"
-// apps/api/tests/auth_flow_test.rs
+```rust
+//! Ubicación: `apps/api/tests/auth_flow_test.rs`
+//!
+//! Descripción: Tests E2E — flujo completo de autenticación.
+//!              Verifica PASETO, no JWT.
+//!
+//! ADRs: 0010, 0003, 0008
 
 #[tokio::test]
 async fn flujo_completo_auth() {
@@ -380,7 +411,7 @@ async fn flujo_completo_auth() {
         access_token.starts_with("v4.local.")
     );
 
-    // Request autenticado
+    // Request autenticada
     let res = client
         .get(format!("{}/api/v1/users/me", base_url))
         .bearer_auth(access_token)
@@ -394,40 +425,95 @@ async fn flujo_completo_auth() {
 
 ---
 
-# Estructura oficial
+## Helpers compartidos para tests
 
-```text id="h97yte"
-crates/
-├── domain/
-│   └── src/**              # Capa 1
-│
-├── application/
-│   └── src/**              # Capa 2
-│
-├── database/
-│   └── tests/**            # Capa 3
-│
-apps/
-└── api/
-    └── tests/**            # Capa 4
+```rust
+//! Ubicación: `crates/test-helpers/src/lib.rs`
+//!
+//! Descripción: Utilidades compartidas para todos los tests del workspace.
+//!
+//! ADRs: 0010
+
+use fake::{faker::internet::en::SafeEmail, Fake};
+use uuid::Uuid;
+
+/// Genera un email de prueba único
+pub fn fake_email() -> String {
+    format!("test-{}@example.com", Uuid::new_v4())
+}
+
+/// Genera un usuario de prueba con datos realistas
+pub fn fake_user(email: &str) -> User {
+    User::new(
+        Email::new(email).unwrap(),
+        PasswordHash::from_hash("$argon2id$v=19$m=19456,t=2,p=1$...".into()),
+    )
+}
+
+/// Genera un hash de password válido para tests (no verifica)
+pub fn fake_hash_fn() -> impl Fn(&str) -> String {
+    |_password: &str| -> String {
+        "$argon2id$v=19$m=19456,t=2,p=1$fake$fake".into()
+    }
+}
+
+/// Levanta servidor de test con DB temporal
+pub async fn spawn_test_server() -> String {
+    // ...
+}
 ```
 
 ---
 
-# Estrategia de ejecución
+## Estructura oficial
 
-| Comando         | Capas     |
-| --------------- | --------- |
-| `just test`     | 1 + 2 + 3 |
-| `just test-e2e` | 4         |
-| `just test-all` | Todas     |
-| CI              | Todas     |
+```text
+crates/
+├── domain/
+│   └── src/**              # Capa 1 — unit tests inline
+│
+├── application/
+│   └── src/**              # Capa 2 — unit tests inline con mocks
+│
+├── database/
+│   └── tests/**            # Capa 3 — integration tests (sqlx::test)
+│
+├── test-helpers/           # Helpers compartidos (fake data, spawn server)
+│   └── src/lib.rs
+│
+apps/
+└── api/
+    └── tests/**            # Capa 4 — E2E tests
+```
 
 ---
 
-# Configuración CI
+## Estrategia de ejecución
 
-```yaml id="53vfrp"
+| Comando | Capas | Perfil nextest |
+| --- | --- | --- |
+| `just test` | 1 + 2 + 3 | `default` |
+| `just test-e2e` | 4 | `e2e` |
+| `just test-all` | Todas | `ci` |
+| CI | Todas | `ci` |
+
+**justfile:**
+```just
+test:
+    cargo nextest run --profile default -E 'not test(e2e)'
+
+test-e2e:
+    cargo nextest run --profile e2e -E 'test(e2e)'
+
+test-all:
+    cargo nextest run --profile ci
+```
+
+---
+
+## Configuración CI
+
+```yaml
 # .github/workflows/ci.yml
 
 jobs:
@@ -439,20 +525,21 @@ jobs:
 
       - uses: dtolnay/rust-toolchain@stable
 
+      - uses: taiki-e/install-action@nextest
+
       - uses: actions/cache@v4
         with:
           path: |
             ~/.cargo/registry
             ~/.cargo/git
             target/
-
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: Install nextest
-        run: cargo install cargo-nextest
+      - name: Run unit + integration tests
+        run: cargo nextest run --profile ci -E 'not test(e2e)'
 
-      - name: Run tests
-        run: cargo nextest run
+      - name: Run E2E tests
+        run: cargo nextest run --profile e2e -E 'test(e2e)'
 
       - name: Clippy
         run: cargo clippy --all-targets -- -D warnings
@@ -462,31 +549,32 @@ jobs:
 
       - name: Security audit
         run: |
-          cargo install cargo-deny cargo-audit
+          cargo install cargo-deny cargo-audit --locked
           cargo deny check
           cargo audit
 ```
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+## Herramientas y Librerías
 
-| Herramienta      | Propósito           |
-| ---------------- | ------------------- |
-| `cargo-nextest`  | Runner ultra rápido |
-| `cargo-mutants`  | Mutation testing    |
-| `proptest`       | Property testing    |
-| `insta`          | Snapshot testing    |
-| `cargo-llvm-cov` | Cobertura visual    |
-| `testcontainers` | PostgreSQL efímero  |
-| `httpmock`       | Simulación HTTP     |
-| `mockall`        | Mocks type-safe     |
+| Herramienta | Propósito | Versión |
+| --- | --- | --- |
+| `cargo-nextest` | Runner ultra rápido | 0.9.135 |
+| `cargo-mutants` | Mutation testing | latest |
+| `proptest` | Property testing | 1.9 |
+| `insta` | Snapshot testing | 1.46 |
+| `cargo-llvm-cov` | Cobertura visual | latest |
+| `sqlx::test` | PostgreSQL efímero por test | 0.8 |
+| `httpmock` | Simulación HTTP | 0.7 |
+| `mockall` | Mocks type-safe | 0.13.1 |
+| `fake` | Generación de datos de prueba | 3.0 |
 
 ---
 
-# Consecuencias
+## Consecuencias
 
-## ✅ Positivas
+### ✅ Positivas
 
 * Feedback ultra rápido en desarrollo
 * Cada capa se prueba en el nivel correcto
@@ -495,42 +583,32 @@ jobs:
 * Alta cobertura de edge cases
 * Arquitectura hexagonal naturalmente testeable
 
----
+### ⚠️ Negativas / Trade-offs
 
-## ⚠️ Negativas / Trade-offs
-
-### Mayor cantidad de archivos
-
+**Mayor cantidad de archivos**
 La separación por capas aumenta la estructura del proyecto.
-
 → Mitigado con generadores CLI (`sintonia g module`)
 → Beneficio enorme en mantenibilidad
 
----
-
-### Tests E2E más lentos
-
+**Tests E2E más lentos**
 Los tests completos tardan más.
-
 → Solo corren en CI y antes de releases
 → El loop local sigue siendo rápido
 
----
-
-### Mocks verbosos
-
+**Mocks verbosos**
 `mockall` puede generar mucho boilerplate.
-
 → Centralizar helpers compartidos
 → Si el mock es enorme, el trait probablemente está mal diseñado
 
 ---
 
-# Decisiones derivadas
+## Decisiones derivadas
 
-* `cargo-nextest` es el runner oficial
-* `just test` no ejecuta E2E
+* `cargo-nextest` es el runner oficial (versión 0.9.135+)
+* `just test` no ejecuta E2E (usa `--profile default`)
 * Los tests E2E verifican explícitamente PASETO (`v4.local.`)
 * El CI bloquea vulnerabilidades con `cargo audit`
 * El dominio debe poder testearse sin infraestructura externa
-* PostgreSQL de testing usa migraciones reales del proyecto
+* PostgreSQL de testing usa `#[sqlx::test]` (DB temporal por test)
+* `testcontainers` como fallback para CI sin PostgreSQL local
+* `fake` crate para generación de datos de prueba consistentes

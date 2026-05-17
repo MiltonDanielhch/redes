@@ -95,7 +95,7 @@ just migrate
 just dev
 ```
 
-### Comandos常用
+### Comandos
 
 ```bash
 just dev           # Desarrollo completo

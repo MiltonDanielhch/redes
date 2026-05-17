@@ -1,12 +1,12 @@
-````md
-# ADR 0017 — Frontend: SvelteKit + Svelte 5 Runes + ConnectRPC
+# ADR 0017 — Frontend: SvelteKit + Svelte 5 Runes + SSE + Local-First
 
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
-| **Fecha** | 2026 |
+| **Fecha** | 2026-05-16 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Relacionado con** | ADR 0003 (Axum), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
+| **Versión** | 2.0 (Corrección 2026) |
+| **Relacionado con** | ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0020 (Monitoreo Regional), ADR 0021 (Local-First Sync Offline), ADR 0022 (Agentes Distribuidos) |
 
 ---
 
@@ -17,12 +17,13 @@ El sistema de monitoreo regional de infraestructura y redes de la Gobernación d
 - dashboards reactivos en tiempo real
 - consumo mínimo de RAM/CPU
 - carga rápida incluso en conexiones lentas
-- SSR para rendimiento inicial
-- tipado compartido con backend Rust
+- SSR para rendimiento inicial y seguridad
+- tipado compartido con backend Rust vía OpenAPI
 - experiencia fluida tipo SPA después de la carga inicial
 - mantenimiento simple para un equipo pequeño
 - accesibilidad compatible con estándares gubernamentales
 - degradación controlada ante fallos de conectividad
+- operación offline parcial en sedes con conectividad inestable (ADR 0021)
 
 React/Next.js añade complejidad y overhead innecesario para este caso de uso.
 
@@ -32,13 +33,20 @@ React/Next.js añade complejidad y overhead innecesario para este caso de uso.
 
 Usar:
 
-- **SvelteKit** como framework frontend fullstack
-- **Svelte 5** con sistema de **Runes**
-- **ConnectRPC-Web** como cliente tipado
+- **SvelteKit SSR** como framework frontend fullstack
+- **Svelte 5** con sistema de **Runes** ($state, $derived, $effect)
+- **REST + OpenAPI** como contrato de comunicación con backend (ADR 0016)
+- **TanStack Query** (Svelte Query) para cache, fetching y estado server
 - **TypeScript strict mode**
-- **TailwindCSS** para UI
-- **adapter-node** para despliegue Docker/Kamal
+- **TailwindCSS v4** para UI
+- **shadcn-svelte** para componentes accesibles
+- **LayerChart** para visualización de métricas y topología
+- **ArkType** para validación runtime type-safe
+- **date-fns** (timezone America/La_Paz) para formateo de fechas
+- **@sveltejs/adapter-node** para despliegue Docker/Coolify
 - **SSE (Server-Sent Events)** para tiempo real por defecto
+- **Local-First architecture** con sync queue e IndexedDB para operación offline (ADR 0021)
+- **PWA** con Service Worker para carga instantánea y cache de assets
 
 ---
 
@@ -49,35 +57,59 @@ apps/web/
 ├── src/
 │   ├── lib/
 │   │   ├── components/
-│   │   │   ├── ui/
-│   │   │   └── features/
+│   │   │   ├── ui/           ← shadcn-svelte (button, card, table, dialog, etc.)
+│   │   │   ├── layout/       ← Sidebar, Topbar, Breadcrumb
+│   │   │   ├── dashboard/    ← KpiCard, StatsOverview, AlertSummary
+│   │   │   ├── devices/        ← DeviceTable, DeviceForm, DeviceDetail
+│   │   │   ├── metrics/        ← MetricsChart, LatencyChart, RealtimeConnector
+│   │   │   ├── topology/       ← NetworkGraph, TopologyControls, Legend
+│   │   │   ├── alerts/         ← AlertTable, AlertDetail, AlertFilters
+│   │   │   ├── intrusions/     ← IntrusionList, IntrusionDetail
+│   │   │   ├── agents/         ← AgentList, AgentConfigModal, AgentMetrics
+│   │   │   ├── admin/          ← UserForm, PermissionMatrix, AuditLogTable
+│   │   │   ├── sync/           ← OfflineBanner, SyncStatusIndicator
+│   │   │   └── auth/           ← LoginForm, RegisterForm
 │   │   │
-│   │   ├── rpc/
-│   │   ├── stores/
-│   │   ├── utils/
-│   │   ├── auth/
-│   │   ├── realtime/
-│   │   ├── charts/
-│   │   └── types/
+│   │   ├── api/                ← Módulos por dominio (auth, sedes, devices, metrics, alerts, topology, intrusions, agents, audit, users)
+│   │   ├── stores/             ← auth.svelte.ts, offline-store.svelte.ts
+│   │   ├── sync/               ← sync-queue.ts, sync-engine.ts, db.ts (SQLite Wasm opcional)
+│   │   ├── validation/         ← ArkType schemas (LoginSchema, DeviceFormSchema, etc.)
+│   │   ├── types/              ← Tipos manuales UI + tipos generados desde OpenAPI
+│   │   ├── utils/              ← Helpers puros (formatters Bolivia, i18n)
+│   │   └── generated/          ← api-types.ts (generado por openapi-typescript, NUNCA editar manualmente)
 │   │
 │   ├── routes/
-│   │   ├── +layout.svelte
-│   │   ├── login/
-│   │   ├── dashboard/
-│   │   │   ├── +layout.svelte
-│   │   │   ├── dispositivos/
-│   │   │   └── alertas/
-│   │   │
-│   │   └── reportes/
+│   │   ├── +layout.svelte      ← Root layout (QueryClientProvider, Toaster, Theme)
+│   │   ├── +layout.server.ts   ← SSR auth verification (cookie httpOnly)
+│   │   ├── (auth)/             ← login, register, forgot-password, reset-password, verify
+│   │   └── (dashboard)/        ← Dashboard, sedes, devices, metrics, topology, alerts, intrusions, agents, admin
+│   │       ├── +layout.svelte  ← Sidebar + Topbar + slot
+│   │       ├── +page.svelte    ← Dashboard principal (KPIs)
+│   │       ├── sedes/
+│   │       ├── devices/
+│   │       ├── metrics/
+│   │       ├── topology/
+│   │       ├── alerts/
+│   │       ├── intrusions/
+│   │       ├── agents/
+│   │       └── admin/
+│   │           ├── users/
+│   │           ├── roles/
+│   │           └── audit/
 │   │
-│   ├── hooks.server.ts
+│   ├── service-worker.ts       ← Cache static assets, network-first API, push opcional
+│   ├── hooks.server.ts         ← Cookie parsing, auth redirect, request_id
 │   ├── app.html
 │   └── app.d.ts
 │
 ├── static/
+│   └── manifest.json           ← PWA manifest (name: "Redes Beni", display: standalone)
 ├── tests/
-└── package.json
-````
+│   ├── unit/                   ← Vitest
+│   └── e2e/                    ← Playwright
+├── package.json
+└── pnpm-workspace.yaml
+```
 
 ---
 
@@ -85,16 +117,51 @@ apps/web/
 
 | Carpeta               | Responsabilidad                              |
 | --------------------- | -------------------------------------------- |
-| `components/ui`       | Componentes reutilizables y presentacionales |
-| `components/features` | Componentes específicos de negocio           |
-| `routes/`             | Ensamblaje de páginas                        |
-| `lib/utils`           | Helpers puros sin dependencias visuales      |
+| `components/ui`       | Componentes reutilizables y presentacionales (shadcn-svelte) |
+| `components/features` | Componentes específicos de dominio (devices, metrics, alerts, topology, agents) |
+| `routes/`             | Ensamblaje de páginas y layouts              |
+| `lib/api/`            | Cliente HTTP por dominio (fetch + tipos OpenAPI) |
+| `lib/stores/`         | Estado reactivo global con Svelte 5 Runes    |
+| `lib/sync/`           | Lógica de operación offline (ADR 0021)       |
+| `lib/validation/`     | Schemas ArkType (cliente + servidor)         |
+| `lib/utils/`          | Helpers puros sin dependencias visuales      |
 
 ## Reglas
 
 * Evitar lógica de negocio dentro de componentes visuales
-* Los componentes UI no conocen RPC ni auth
-* La lógica de realtime vive en `lib/realtime`
+* Los componentes UI no conocen la API ni auth
+* La lógica de realtime vive en `lib/api/` y `lib/stores/`
+* Los tipos generados desde OpenAPI (`lib/generated/api-types.ts`) nunca se editan manualmente
+* Todo formulario usa ArkType para validación cliente y servidor
+
+---
+
+# Stack tecnológico detallado
+
+| Componente | Tecnología | Versión/Config | ADR |
+|------------|-----------|----------------|-----|
+| Framework | SvelteKit | SSR, adapter-node | — |
+| Reactividad | Svelte 5 Runes | $state, $derived, $effect | — |
+| Lenguaje | TypeScript | strict mode | — |
+| Gestor de paquetes | pnpm | v10 | ADR 0012 |
+| Node | Node.js | v24 | ADR 0012 |
+| Estilos | TailwindCSS v4 | @tailwindcss/vite | FE.I |
+| Componentes UI | shadcn-svelte | baseColor: slate | FE.I |
+| Iconos | lucide-svelte | — | FE.I |
+| Data fetching | TanStack Query (Svelte Query) | staleTime 5min, retry 1 | FE.II |
+| Tablas | TanStack Table (Svelte Table) | sorting, filtering, pagination | FE.V |
+| Validación | ArkType | runtime type-safe | FE.II |
+| Gráficos | LayerChart | line, area, pie, donut, graph | FE.VI, FE.VII |
+| Fechas | date-fns | timezone America/La_Paz | FE.XII |
+| API types | openapi-typescript | generado desde `/openapi.json` | ADR 0016 |
+| HTTP client | fetch nativo | wrapper con interceptores | FE.II |
+| Realtime | SSE (EventSource) | reconexión automática, fallback polling | FE.VI |
+| Offline | IndexedDB + sync queue | FIFO, conflict resolution last-write-wins | FE.XI |
+| PWA | Service Worker | cache static, network-first API | FE.XII |
+| Testing unit | Vitest | — | ADR 0010 |
+| Testing E2E | Playwright | CI only | ADR 0010 |
+| Lint | eslint-plugin-svelte | — | ADR 0010 |
+| Check | svelte-check | — | ADR 0010 |
 
 ---
 
@@ -105,14 +172,19 @@ Se adopta el nuevo sistema de reactividad explícita de Svelte 5.
 ## Estado reactivo
 
 ```ts
-let dispositivos = $state([]);
+// src/lib/stores/auth.svelte.ts
+let user = $state<User | null>(null);
+let accessToken = $state<string | null>(null);
+let refreshToken = $state<string | null>(null);
 ```
 
 ## Valores derivados
 
 ```ts
-let dispositivosActivos = $derived(
-    dispositivos.filter(d => d.online)
+let isLoggedIn = $derived(user !== null && accessToken !== null);
+let isAdmin = $derived(user?.roles.includes("admin") ?? false);
+let hasPermission = (permission: string) => $derived(
+    user?.permissions.includes(permission) ?? false
 );
 ```
 
@@ -120,7 +192,9 @@ let dispositivosActivos = $derived(
 
 ```ts
 $effect(() => {
-    console.log("Dispositivos actualizados");
+    if (accessToken && isTokenExpiringSoon(accessToken)) {
+        triggerSilentRefresh();
+    }
 });
 ```
 
@@ -130,10 +204,10 @@ $effect(() => {
 
 | Estrategia   | Uso                      |
 | ------------ | ------------------------ |
-| SSR          | Login, dashboard inicial |
-| CSR/SPA      | Navegación interna       |
-| Streaming    | Métricas en tiempo real  |
-| Lazy Loading | Gráficos pesados         |
+| SSR          | Login, dashboard inicial, SEO, auth verification |
+| CSR/SPA      | Navegación interna, dashboards interactivos |
+| Streaming    | Métricas en tiempo real vía SSE |
+| Lazy Loading | Gráficos pesados (LayerChart), modales admin |
 
 ---
 
@@ -141,19 +215,24 @@ $effect(() => {
 
 | Estrategia        | Uso                            |
 | ----------------- | ------------------------------ |
-| `+page.server.ts` | Datos sensibles o autenticados |
-| `+page.ts`        | Datos cacheables               |
-| Fetch cliente     | Tiempo real                    |
-| SSE               | Métricas continuas             |
+| `+page.server.ts` | Datos sensibles o autenticados (verificación cookie httpOnly, redirect si no auth) |
+| `+page.ts`        | Datos cacheables (lista de sedes, dispositivos) |
+| Fetch cliente     | Acciones POST/PUT, TanStack mutations |
+| SSE               | Métricas continuas, alertas en tiempo real |
+| IndexedDB         | Cache offline de datos de lectura (ADR 0021) |
 
-Ejemplo:
+Ejemplo SSR auth:
 
 ```ts
-// +page.server.ts
-export async function load({ locals }) {
-    return {
-        user: locals.user
-    };
+// +layout.server.ts
+export async function load({ cookies, locals }) {
+    const token = cookies.get("access_token"); // httpOnly, secure, sameSite=strict
+
+    if (!token && isProtectedRoute(locals.route)) {
+        throw redirect(302, "/login");
+    }
+
+    return { user: locals.user };
 }
 ```
 
@@ -161,25 +240,55 @@ export async function load({ locals }) {
 
 # Comunicación con backend
 
-Se utilizará ConnectRPC-Web con generación automática de clientes TypeScript.
+Se utiliza **REST + OpenAPI** como contrato oficial (ADR 0016). El frontend consume tipos generados automáticamente desde `/openapi.json` del backend.
+
+## Generación de tipos
 
 ```bash
-buf generate
+# Descargar spec y generar tipos TypeScript puros
+npx openapi-typescript http://localhost:8080/openapi.json   --output apps/web/src/lib/generated/api-types.ts
 ```
 
-Genera:
-
-```text
-src/lib/types/
-```
-
-Ejemplo:
+## Cliente API
 
 ```ts
-const client = createPromiseClient(NetworkService, transport);
+// src/lib/api/client.ts
+const apiClient = {
+    async fetch<T>(endpoint: string, options?: RequestInit): Promise<T> {
+        const res = await fetch(`${PUBLIC_API_URL}${endpoint}`, {
+            ...options,
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${getAccessToken()}`,
+                "X-Request-Id": generateRequestId(),
+                ...options?.headers,
+            },
+        });
 
-const response = await client.getDevices({});
+        if (res.status === 401) {
+            await handleUnauthorized();
+        }
+
+        return res.json();
+    }
+};
 ```
+
+## Módulos por dominio
+
+```ts
+// src/lib/api/devices.ts
+import { apiClient } from "./client";
+import type { paths } from "$lib/generated/api-types";
+
+type ListDevicesResponse = paths["/api/v1/devices"]["get"]["responses"]["200"]["content"]["application/json"];
+
+export async function listDevices(params?: { sede_id?: string }): Promise<ListDevicesResponse> {
+    return apiClient.fetch(`/api/v1/devices?${new URLSearchParams(params)}`);
+}
+```
+
+**Nota:** No se usa ConnectRPC ni `buf generate`. El proyecto utiliza REST/Axum con OpenAPI como contrato único (ADR 0003, ADR 0016).
 
 ---
 
@@ -191,15 +300,17 @@ const response = await client.getDevices({});
 | --------------- | ------------- |
 | Estado local    | `$state`      |
 | Estado derivado | `$derived`    |
-| Auth            | Context API   |
-| Cache RPC       | ConnectRPC    |
-| Tiempo real     | SSE/WebSocket |
+| Auth            | `auth.svelte.ts` (Runes + localStorage encriptado) |
+| Cache server    | TanStack Query (QueryClient) |
+| Tiempo real     | SSE (EventSource) |
+| Offline         | `offline-store.svelte.ts` + IndexedDB |
 
 ## Restricciones
 
-* Evitar stores globales innecesarios
+* Evitar stores globales innecesarios (Svelte 5 Runes reemplaza Svelte stores clásicos)
 * No usar Redux/Zustand/MobX
-* La cache pertenece al cliente RPC
+* La cache de datos server pertenece a TanStack Query
+* Los tokens de auth se persisten en **localStorage encriptado** (subtle crypto) para multi-tab; la cookie httpOnly se usa para SSR
 
 ---
 
@@ -207,17 +318,50 @@ const response = await client.getDevices({});
 
 ## Estrategia
 
-* PASETO desde backend Rust
-* Cookie HttpOnly Secure
-* Refresh token rotativo
-* Middleware SSR en `hooks.server.ts`
+* PASETO v4 desde backend Rust (ADR 0008)
+* **localStorage encriptado** para access_token y refresh_token (persistencia multi-tab)
+* **Cookie httpOnly, Secure, SameSite=Strict** para SSR auth verification
+* Refresh token rotativo (one-time use)
+* Auto-refresh silencioso cuando el token expira en < 2 minutos
 
 ```ts
+// src/lib/stores/auth.svelte.ts
+export const authStore = {
+    user: $state<User | null>(null),
+    accessToken: $state<string | null>(null),
+    refreshToken: $state<string | null>(null),
+
+    setAuth(user, access, refresh) {
+        this.user = user;
+        this.accessToken = access;
+        this.refreshToken = refresh;
+        persistEncrypted({ access, refresh }); // localStorage + subtle crypto
+    },
+
+    clearAuth() {
+        this.user = null;
+        this.accessToken = null;
+        this.refreshToken = null;
+        clearPersisted();
+        QueryClient.clear();
+        goto("/login");
+    }
+};
+```
+
+## SSR verification
+
+```ts
+// hooks.server.ts
 export async function handle({ event, resolve }) {
-    const token = event.cookies.get("session");
+    const token = event.cookies.get("access_token"); // httpOnly cookie seteada en login
 
     if (token) {
-        event.locals.user = await validateToken(token);
+        try {
+            event.locals.user = await validateTokenServerSide(token);
+        } catch {
+            event.cookies.delete("access_token", { path: "/" });
+        }
     }
 
     return resolve(event);
@@ -226,9 +370,10 @@ export async function handle({ event, resolve }) {
 
 ## Reglas
 
-* Nunca usar localStorage para tokens
-* Cookies `Secure`, `HttpOnly`, `SameSite=Lax`
-* Logout invalida sesión en backend
+* Nunca guardar tokens en localStorage sin encriptar
+* Cookies `Secure`, `HttpOnly`, `SameSite=Strict` para SSR
+* Logout invalida sesión en backend y limpia localStorage + cookies
+* Mutex en refresh token para evitar race conditions
 
 ---
 
@@ -236,39 +381,76 @@ export async function handle({ event, resolve }) {
 
 ## Estrategia
 
-Para métricas de monitoreo:
+Para métricas de monitoreo y alertas:
 
-* Server-Sent Events (SSE) por defecto
-* WebSockets solo si realmente se necesitan
+* **Server-Sent Events (SSE)** por defecto
+* **Polling** como fallback si SSE falla
+* **WebSocket** solo si se justifica arquitectónicamente (requiere ADR adicional)
 
 ## Motivos
 
-* SSE consume menos recursos
-* más simple
-* suficiente para dashboards
-* reconexión automática integrada en browser
+* SSE consume menos recursos que WebSockets
+* Más simple (HTTP nativo, reconexión automática del browser)
+* Suficiente para dashboards unidireccionales (server → client)
+* Reconexión automática integrada en EventSource
 
 ## Política
 
 | Tecnología | Uso                        |
 | ---------- | -------------------------- |
-| SSE        | Dashboards                 |
-| Polling    | Fallback                   |
-| WebSocket  | Comunicación bidireccional |
+| SSE        | Dashboards, métricas, alertas en tiempo real |
+| Polling    | Fallback cada 30s si SSE desconectado > 30s |
+| WebSocket  | Comunicación bidireccional (requiere justificación) |
 
-SSE es el default.
-WebSocket requiere justificación arquitectónica.
+## Implementación
+
+```ts
+// src/lib/api/realtime.ts
+export function connectMetricsStream(deviceId: string, onMessage: (data) => void) {
+    const source = new EventSource(`/api/v1/stream/metrics?device_id=${deviceId}`);
+
+    source.onmessage = (event) => {
+        onMessage(JSON.parse(event.data));
+    };
+
+    source.onerror = () => {
+        source.close();
+        // Fallback a polling después de 30s sin reconexión
+        setTimeout(() => startPollingFallback(deviceId, onMessage), 30000);
+    };
+
+    return () => source.close();
+}
+```
 
 ---
 
-# Degradación controlada
+# Degradación controlada y Local-First (ADR 0021)
 
-Si la conexión realtime falla:
+Si la conexión realtime falla o el dispositivo está offline:
 
 * fallback automático a polling cada 30s
-* mostrar último snapshot válido
+* mostrar último snapshot válido desde cache (TanStack Query + IndexedDB)
 * dashboard nunca debe quedar vacío
-* notificación visual de estado degradado
+* notificación visual de estado degradado (banner offline)
+* acciones del usuario se encolan en IndexedDB (sync queue FIFO)
+* al volver online: procesar cola, resolver conflictos last-write-wins
+
+```ts
+// src/lib/sync/offline-store.svelte.ts
+let isOnline = $state(navigator.onLine);
+let syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');
+let pendingActions = $state<PendingAction[]>([]);
+
+window.addEventListener('online', () => {
+    isOnline = true;
+    processSyncQueue();
+});
+
+window.addEventListener('offline', () => {
+    isOnline = false;
+});
+```
 
 ---
 
@@ -276,18 +458,36 @@ Si la conexión realtime falla:
 
 ## Estrategia
 
-* `ConnectError` como error estándar
-* Error boundaries por layout
-* Retry automático solo para GETs idempotentes
-* Toasts no bloqueantes
+* Error boundaries por layout (SvelteKit)
+* Retry automático solo para GETs idempotentes (TanStack Query)
+* Toasts no bloqueantes (sonner)
+* Manejo específico por código HTTP:
+  * 401 → intentar refresh → re-login si falla
+  * 403 → redirect /dashboard + toast "Sin permiso"
+  * 429 → mostrar countdown, deshabilitar botón
+  * 500 → toast genérico + log
 
 ```ts
-import { ConnectError } from "@connectrpc/connect";
-
-export function handleRpcError(error: unknown) {
-    if (error instanceof ConnectError) {
-        console.error(error.code, error.message);
+// src/lib/api/client.ts
+async function handleResponse<T>(res: Response): Promise<T> {
+    if (res.status === 401) {
+        const refreshed = await attemptSilentRefresh();
+        if (!refreshed) {
+            authStore.clearAuth();
+            throw new Error("SESSION_EXPIRED");
+        }
     }
+
+    if (res.status === 403) {
+        goto("/dashboard");
+        toast.error("No tienes permiso para acceder a este recurso");
+    }
+
+    if (!res.ok) {
+        throw new Error(`HTTP ${res.status}`);
+    }
+
+    return res.json();
 }
 ```
 
@@ -297,12 +497,30 @@ export function handleRpcError(error: unknown) {
 
 ## Stack visual
 
-| Herramienta  | Uso                    |
-| ------------ | ---------------------- |
-| TailwindCSS  | Layout/UI              |
-| Lucide Icons | Iconografía            |
-| LayerChart   | Gráficos               |
-| Bits UI      | Componentes accesibles |
+| Herramienta      | Uso                              |
+| ---------------- | -------------------------------- |
+| TailwindCSS v4   | Layout, spacing, tipografía      |
+| shadcn-svelte    | Componentes accesibles (button, card, dialog, table, form, toast) |
+| Lucide Icons     | Iconografía consistente          |
+| LayerChart       | Gráficos de métricas y topología |
+
+## shadcn-svelte
+
+Instalación:
+
+```bash
+npx shadcn-svelte@latest init
+# baseColor: slate
+# aliases: $lib/components/ui, $lib/utils
+```
+
+Componentes base instalados:
+- button, card, badge, separator, avatar, table
+- input, label, form, select, textarea, checkbox
+- alert, dialog, dropdown-menu, toast, sonner
+- tabs, navigation-menu, sidebar, sheet, breadcrumb
+- data-table, pagination, command
+- tooltip, skeleton, progress, calendar
 
 ---
 
@@ -312,9 +530,69 @@ export function handleRpcError(error: unknown) {
 
 * WCAG AA mínimo
 * navegación completa por teclado
-* contraste accesible
+* contraste accesible (ratio 4.5:1 mínimo)
 * `aria-label` obligatorio en icon buttons
-* Bits UI preferido por accesibilidad nativa
+* shadcn-svelte como base (construido sobre Bits UI con accesibilidad nativa)
+* focus indicators visibles
+* skip-to-content link
+
+---
+
+# Formateo e i18n (Español Bolivia)
+
+## Locale por defecto
+
+* Idioma primario: **es** (español)
+* Timezone: **America/La_Paz**
+* date-fns locale `es` para formateo
+
+## Formatters de dominio
+
+```ts
+// src/lib/utils/formatters.ts
+export function formatDate(date: string | Date): string {
+    return format(new Date(date), "dd/MM/yyyy HH:mm:ss", { locale: es });
+}
+
+export function formatNetworkSpeed(bps: number): string {
+    if (bps > 1_000_000_000) return `${(bps / 1_000_000_000).toFixed(2)} Gbps`;
+    if (bps > 1_000_000) return `${(bps / 1_000_000).toFixed(2)} Mbps`;
+    if (bps > 1_000) return `${(bps / 1_000).toFixed(2)} Kbps`;
+    return `${bps} bps`;
+}
+
+export function formatLatency(ms: number): string {
+    return `${ms.toFixed(2)} ms`;
+}
+
+export function formatBytes(bytes: number): string {
+    const units = ["B", "KB", "MB", "GB", "TB"];
+    let i = 0;
+    while (bytes >= 1024 && i < units.length - 1) {
+        bytes /= 1024;
+        i++;
+    }
+    return `${bytes.toFixed(2)} ${units[i]}`;
+}
+
+export function formatPercent(value: number): string {
+    return `${value.toFixed(1)}%`;
+}
+```
+
+## Términos técnicos del dominio
+
+| Técnico (código) | Español (UI)                |
+| ---------------- | --------------------------- |
+| switch           | Switch                      |
+| router           | Router                      |
+| access_point     | Punto de Acceso             |
+| firewall         | Firewall                    |
+| bandwidth_saturation | Saturación de Ancho de Banda |
+| packet_loss      | Pérdida de Paquetes         |
+| intrusion        | Intrusión / Dispositivo No Autorizado |
+| topology         | Topología de Red            |
+| agent            | Agente de Monitoreo         |
 
 ---
 
@@ -322,15 +600,15 @@ export function handleRpcError(error: unknown) {
 
 ## Capas
 
-| Tipo        | Herramienta     |
-| ----------- | --------------- |
-| Unit        | Vitest          |
-| Componentes | Testing Library |
-| E2E         | Playwright      |
+| Tipo        | Herramienta     | Cuándo corre     |
+| ----------- | --------------- | ---------------- |
+| Unit        | Vitest          | Pre-commit, CI   |
+| Componentes | Testing Library | CI               |
+| E2E         | Playwright      | CI only          |
 
 ```bash
-pnpm test
-pnpm test:e2e
+pnpm test        # Vitest
+pnpm test:e2e    # Playwright
 ```
 
 ---
@@ -340,19 +618,36 @@ pnpm test:e2e
 ## Headers CSP
 
 ```ts
-content-security-policy:
+// hooks.server.ts
+const csp = `
 default-src 'self';
 script-src 'self';
 style-src 'self' 'unsafe-inline';
 connect-src 'self' https://api.tudominio.gob.bo;
+img-src 'self' data: blob:;
+font-src 'self';
+frame-ancestors 'none';
+base-uri 'self';
+form-action 'self';
+`.replace(/\s+/g, " ").trim();
+
+export async function handle({ event, resolve }) {
+    const response = await resolve(event);
+    response.headers.set("Content-Security-Policy", csp);
+    response.headers.set("X-Frame-Options", "DENY");
+    response.headers.set("X-Content-Type-Options", "nosniff");
+    response.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+    return response;
+}
 ```
 
 ## Reglas
 
-* Nunca guardar tokens en localStorage
-* Cookies HttpOnly obligatorias
-* Sanitizar HTML dinámico
-* Rate limit desde backend
+* Nunca guardar tokens en localStorage sin encriptar (subtle crypto)
+* Cookies HttpOnly obligatorias para SSR auth
+* Sanitizar HTML dinámico (DOMPurify si es necesario)
+* Rate limit desde backend (ADR 0009)
+* Validar todos los inputs con ArkType antes de enviar
 
 ---
 
@@ -360,32 +655,37 @@ connect-src 'self' https://api.tudominio.gob.bo;
 
 ## Estrategia
 
-* request_id propagado desde backend
-* errores enviados a Sentry
+* request_id propagado desde backend (header X-Request-Id)
+* errores enviados a Sentry (opcional)
 * logs estructurados en development
-* métricas Web Vitals
+* métricas Web Vitals (LCP, FID, CLS)
 
 ---
 
 # Optimización de build
 
-```js
+```ts
 // vite.config.ts
+import { sveltekit } from "@sveltejs/kit/vite";
+import { defineConfig } from "vite";
+import tailwindcss from "@tailwindcss/vite";
+
 export default defineConfig({
+    plugins: [tailwindcss(), sveltekit()],
     build: {
-        target: 'es2022',
+        target: "es2022",
         sourcemap: false,
-    }
+    },
 });
 ```
 
 ## Estrategias
 
-* code splitting automático
-* lazy imports
+* code splitting automático (Vite)
+* lazy imports para gráficos y admin
 * tree shaking
-* imágenes optimizadas
-* prerender parcial
+* imágenes optimizadas (WebP/AVIF)
+* prerender parcial para páginas públicas
 
 ---
 
@@ -397,13 +697,71 @@ export default defineConfig({
 | Lighthouse    | >90         |
 | Primera carga | <2s         |
 | TTFB local    | <300ms      |
+| Hydration     | <100ms      |
+
+---
+
+# PWA y Service Worker (ADR 0021)
+
+```ts
+// src/service-worker.ts
+const CACHE = "redes-beni-v1";
+const ASSETS = [
+    "/",
+    "/dashboard",
+    "/manifest.json",
+    "/favicon.png",
+    // static assets
+];
+
+self.addEventListener("install", (event) => {
+    event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(ASSETS)));
+    self.skipWaiting();
+});
+
+self.addEventListener("fetch", (event) => {
+    // Network-first para API calls
+    if (event.request.url.includes("/api/")) {
+        event.respondWith(
+            fetch(event.request).catch(() => caches.match(event.request))
+        );
+        return;
+    }
+
+    // Cache-first para static assets
+    event.respondWith(
+        caches.match(event.request).then((response) => {
+            return response || fetch(event.request);
+        })
+    );
+});
+```
+
+## Web App Manifest
+
+```json
+// static/manifest.json
+{
+    "name": "Redes Beni — Monitoreo de Infraestructura",
+    "short_name": "Redes Beni",
+    "start_url": "/dashboard",
+    "display": "standalone",
+    "background_color": "#0f172a",
+    "theme_color": "#0f172a",
+    "icons": [
+        { "src": "/icon-192.png", "sizes": "192x192" },
+        { "src": "/icon-512.png", "sizes": "512x512" }
+    ]
+}
+```
 
 ---
 
 # Docker deployment
 
 ```dockerfile
-FROM node:22-alpine AS builder
+# Containerfile (Node 24, no 22)
+FROM node:24-alpine AS builder
 
 WORKDIR /app
 
@@ -415,7 +773,7 @@ COPY . .
 
 RUN pnpm build
 
-FROM node:22-alpine
+FROM node:24-alpine
 
 WORKDIR /app
 
@@ -423,11 +781,14 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/build ./build
 COPY --from=builder /app/package.json ./
+COPY --from=builder /app/node_modules ./node_modules
 
 EXPOSE 3000
 
 CMD ["node", "build"]
 ```
+
+**Nota:** Se utiliza Node 24 (no 22) para alinearse con ADR 0012 y mise.toml.
 
 ---
 
@@ -437,11 +798,11 @@ SvelteKit NO actúa como Backend For Frontend (BFF).
 
 El backend Rust mantiene:
 
-* autenticación
-* lógica de negocio
-* ConnectRPC
-* realtime
-* permisos
+* autenticación (PASETO, argon2id)
+* lógica de negocio (hexagonal)
+* REST API + OpenAPI
+* realtime (SSE)
+* permisos RBAC
 * auditoría
 
 SvelteKit funciona únicamente como:
@@ -451,6 +812,8 @@ SvelteKit funciona únicamente como:
 * rendering
 * hydration
 * experiencia SPA
+* cache cliente (TanStack Query)
+* operación offline (Local-First)
 
 ---
 
@@ -458,25 +821,43 @@ SvelteKit funciona únicamente como:
 
 | Opción          | Motivo de descarte                                      |
 | --------------- | ------------------------------------------------------- |
-| React + Next.js | Overhead innecesario                                    |
-| Astro           | Excelente SSR pero menos ideal para dashboards realtime |
-| Vue/Nuxt        | Ecosistema menos alineado con el stack                  |
+| React + Next.js | Overhead innecesario, bundle más pesado                 |
+| Astro           | Excelente SSR pero menos ideal para dashboards realtime interactivos |
+| Vue/Nuxt        | Ecosistema menos alineado con el stack Rust/Svelte del proyecto |
 | Angular         | Demasiado pesado para VPS pequeños                      |
+| ConnectRPC/gRPC | Incompatible con stack REST/OpenAPI/Axum establecido (ADR 0003, ADR 0016) |
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+# Herramientas y Librerías (Edición 2026)
 
-| Herramienta              | Propósito                    |
-| ------------------------ | ---------------------------- |
-| `vite-bundle-visualizer` | Analizar tamaño del bundle   |
-| `playwright`             | E2E testing                  |
-| `vitest`                 | Unit testing rápido          |
-| `svelte-check`           | Validación TypeScript/Svelte |
-| `unplugin-icons`         | Íconos optimizados           |
-| `msw`                    | Mocking de APIs para tests   |
-| `eslint-plugin-svelte`   | Calidad de código            |
-| `zod`                    | Validación runtime frontend  |
+| Herramienta              | Propósito                              |
+| ------------------------ | -------------------------------------- |
+| `vite-bundle-visualizer` | Analizar tamaño del bundle             |
+| `playwright`             | E2E testing                            |
+| `vitest`                 | Unit testing rápido                    |
+| `svelte-check`           | Validación TypeScript/Svelte           |
+| `lucide-svelte`          | Iconografía                            |
+| `layerchart`             | Gráficos Svelte (line, area, pie, graph) |
+| `openapi-typescript`     | Tipos TypeScript desde OpenAPI         |
+| `tanstack-svelte-query` | Cache y data fetching                  |
+| `tanstack-svelte-table` | Tablas con sorting/filtering/pagination|
+| `arktype`                | Validación runtime type-safe           |
+| `date-fns`               | Formateo de fechas con timezone        |
+| `sonner`                 | Toasts no bloqueantes                  |
+| `eslint-plugin-svelte`   | Calidad de código                      |
+
+**Cambios respecto a v1.0:**
+- Eliminado `zod` → reemplazado por **ArkType** (consistencia con FE.II)
+- Eliminado `ConnectRPC` / `@connectrpc/connect` → reemplazado por **REST + fetch + openapi-typescript**
+- Eliminado `buf generate` → reemplazado por **openapi-typescript** desde `/openapi.json`
+- Agregado **shadcn-svelte** como sistema de componentes UI
+- Agregado **TanStack Query** y **TanStack Table**
+- Agregado **LayerChart** para gráficos
+- Agregado **date-fns** con timezone Bolivia
+- Agregado secciones de **Local-First**, **PWA**, **Service Worker**
+- Agregado secciones de **Agentes**, **Topología**, **Formateo de dominio**
+- Node actualizado a **v24**
 
 ---
 
@@ -484,13 +865,15 @@ SvelteKit funciona únicamente como:
 
 ## ✅ Positivas
 
-* Bundle extremadamente pequeño
-* Excelente rendimiento en hardware limitado
+* Bundle extremadamente pequeño (Svelte no tiene runtime pesado)
+* Excelente rendimiento en hardware limitado (VPS 1GB)
 * Menor consumo RAM que React/Next
-* Realtime eficiente para dashboards
-* Tipos compartidos automáticamente con backend
-* SSR mejora UX inicial
-* Curva de mantenimiento menor
+* Realtime eficiente para dashboards (SSE nativo)
+* Tipos compartidos automáticamente con backend vía OpenAPI
+* SSR mejora UX inicial y seguridad
+* Curva de mantenimiento menor (menos boilerplate)
+* Operación offline robusta para sedes del Beni (ADR 0021)
+* PWA permite instalación como app nativa en dispositivos de campo
 
 ## ⚠️ Negativas / Trade-offs
 
@@ -498,26 +881,40 @@ SvelteKit funciona únicamente como:
   → Mitigado con arquitectura simple y tipado fuerte
 
 * Menor cantidad de librerías que React
-  → El ecosistema actual ya cubre dashboards modernos
+  → El ecosistema actual (shadcn-svelte, LayerChart, TanStack) ya cubre dashboards modernos
 
 * Menos developers disponibles en mercado
   → El código Svelte suele ser más corto y fácil de entender
+
+* Local-First añade complejidad frontend
+  → Necesaria para operación en sedes con conectividad inestable (ADR 0021)
 
 ---
 
 # Decisiones derivadas
 
 * Todo el frontend usa TypeScript strict
-* ConnectRPC es la única forma de comunicación frontend/backend
-* No usar Redux/Zustand/MobX
-* El frontend se despliega en contenedor separado
-* Cookies HttpOnly obligatorias para auth
-* SSE es preferido sobre WebSockets
+* **REST + OpenAPI** es la única forma de comunicación frontend/backend (no ConnectRPC)
+* No usar Redux/Zustand/MobX (Svelte 5 Runes + TanStack Query son suficientes)
+* El frontend se despliega en contenedor separado (Coolify, ADR 0019)
+* Cookies HttpOnly para SSR auth; localStorage encriptado para persistencia multi-tab
+* SSE es preferido sobre WebSockets (ADR 0020)
 * `pnpm check` y `svelte-check` corren en CI
 * Playwright corre solo en CI
 * Vitest corre en pre-push
 * `pnpm build` obligatorio antes de deploy
-* Los tipos generados por `buf generate` nunca se editan manualmente
+* Los tipos generados por `openapi-typescript` nunca se editan manualmente
+* ArkType valida todo input de formularios
+* LayerChart es la librería oficial de gráficos del proyecto
+* shadcn-svelte es la base de componentes UI accesibles
+* El Service Worker implementa network-first para API y cache-first para assets
+* Los formatters de red (Mbps, ms, bytes) usan locale es_BO
 
-```
-```
+---
+
+# Historial de cambios
+
+| Versión | Fecha       | Cambios realizados |
+| ------- | ----------- | ------------------ |
+| 1.0     | 2026 (orig) | Versión inicial con ConnectRPC, buf generate, zod, Node 22 |
+| 2.0     | 2026-05-16  | Reemplaza ConnectRPC/buf por REST/OpenAPI; reemplaza zod por ArkType; agrega shadcn-svelte, TanStack Query/Table, LayerChart, date-fns; agrega Local-First, PWA, Service Worker; agrega secciones de agentes, topología, formateo Bolivia; actualiza Node a v24; corrige estrategia de auth (localStorage encriptado + cookies httpOnly) |
