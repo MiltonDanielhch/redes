@@ -1,0 +1,22 @@
+# Ubicación: `crates/observability/Cargo.toml`
+#
+# Descripción: Módulo de observabilidad - tracing, métricas y logging estructurado.
+#
+# ADRs relacionados: 0011 (Estándares de desarrollo)
+
+[package]
+name = "observability"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+tracing-opentelemetry = { workspace = true }
+opentelemetry = { workspace = true }
+metrics = { workspace = true }
+metrics-exporter-prometheus = { workspace = true }
+axum = { workspace = true }
+serde = { workspace = true }
+anyhow = { workspace = true }
