@@ -20,15 +20,15 @@
 
 | Sección | Nombre | Progreso |
 |---------|--------|----------|
-| A.1 | Registro — back + front | [ ] |
-| A.2 | Verificación de email — back + front | [ ] |
-| A.3 | Login — back + front | [ ] |
-| A.4 | Sesión activa y protección de rutas | [ ] |
-| A.5 | Refresh de tokens | [ ] |
-| A.6 | Logout — back + front | [ ] |
-| A.7 | Password Reset — back + front | [ ] |
-| A.8 | RBAC — permisos en acción | [ ] |
-| A.9 | Rate Limiting en auth | [ ] |
+| A.1 | Registro — back + front | [ ] (pendiente backend) |
+| A.2 | Verificación de email | [ ] (pendiente backend) |
+| A.3 | Login — back + front | [x] (frontend listo) |
+| A.4 | Sesión activa y protección de rutas | [x] (parcial) |
+| A.5 | Refresh de tokens | [ ] (pendiente backend) |
+| A.6 | Logout — back + front | [x] (frontend listo) |
+| A.7 | Password Reset | [ ] (pendiente backend) |
+| A.8 | RBAC — permisos en acción | [x] (frontend listo) |
+| A.9 | Rate Limiting en auth | [ ] (pendiente backend) |
 | **Total Auth** | | [ ] |
 
 ---

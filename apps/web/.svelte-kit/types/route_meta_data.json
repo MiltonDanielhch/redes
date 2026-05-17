@@ -1,11 +1,27 @@
 {
-	"/(dashboard)": [],
-	"/(auth)": [],
+	"/(dashboard)": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(auth)": [
+		"src/routes/(auth)/+layout.ts"
+	],
 	"/": [],
-	"/(dashboard)/dashboard": [],
-	"/(dashboard)/devices": [],
-	"/(dashboard)/devices/[id]": [],
-	"/(auth)/login": [],
-	"/(auth)/register": [],
-	"/(dashboard)/sedes": []
+	"/(dashboard)/dashboard": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(dashboard)/devices": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(dashboard)/devices/[id]": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(auth)/login": [
+		"src/routes/(auth)/+layout.ts"
+	],
+	"/(auth)/register": [
+		"src/routes/(auth)/+layout.ts"
+	],
+	"/(dashboard)/sedes": [
+		"src/routes/(dashboard)/+layout.ts"
+	]
 }
