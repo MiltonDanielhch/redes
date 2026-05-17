@@ -23,7 +23,7 @@
 | FE.II | Tipos generados + Estado + Validación | [x] |
 | FE.III | Layouts, navegación y SSR | [x] |
 | FE.IV | Dashboard de Monitoreo | [x] |
-| FE.V | Inventario y Dispositivos | [ ] |
+| FE.V | Inventario y Dispositivos | [x] (parcial) |
 | FE.VI | Métricas, Gráficos y SSE | [ ] |
 | FE.VII | Topología de Red | [ ] |
 | FE.VIII | Alertas e Intrusiones | [ ] |

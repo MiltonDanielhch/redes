@@ -3,6 +3,9 @@
 	"/(auth)": [],
 	"/": [],
 	"/(dashboard)/dashboard": [],
+	"/(dashboard)/devices": [],
+	"/(dashboard)/devices/[id]": [],
 	"/(auth)/login": [],
-	"/(auth)/register": []
+	"/(auth)/register": [],
+	"/(dashboard)/sedes": []
 }
