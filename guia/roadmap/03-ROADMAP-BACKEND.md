@@ -24,13 +24,14 @@
 | Bloque | Nombre | Progreso |
 |--------|--------|----------|
 | I | Fundación — Dominio + DB + RBAC | [x] B.1 Entities + Ports |
+| | | [x] B.2 Migraciones SQLx |
 | II | API — Axum + Middleware + Errores | [ ] |
 | III | Seguridad — Auth + RBAC + Audit | [ ] |
 | IV | OpenAPI + Scalar | [ ] |
 | V | Async — Jobs + Cache + Email | [ ] |
 | VI | Observabilidad | [ ] |
 | VII | Monitoreo — Inventario + Métricas + Topología | [ ] |
-| **Backend Core** | | [x] 10% |
+| **Backend Core** | | [x] 20% |
 
 ---
 
@@ -55,29 +56,53 @@
 [x] Verificar que el pool conecta al arrancar (fail-fast)
 ```
 
-### I.2 — Migraciones del sistema (ADR 0006, ADR 0020)
+### I.2 — Migraciones SQLx (Completado ✅ 2026-05-17)
 
 > **Referencia:** ADR 0006, ADR 0005, ADR 0020
 
 ```
-[x] Entidades de dominio creadas:
-    - User, Role, Session, AuditLog, Token (auth)
-    - Alert, IntrusionEvent (monitoreo)
-    - Device, MetricReading, DeviceLink (inventario)
-    - Sede (estructura regional)
+[x] data/migrations/001_create_users.sql
+    [x] users con Soft Delete (deleted_at)
+    [x] user_roles N:M
+    [x] trigger updated_at
 
-[x] Puertos/Repositorios (traits síncronos):
-    - UserRepository, SessionRepository, AuditRepository, TokenRepository
-    - DeviceRepository, SedeRepository, MetricsRepository
-    - AlertRepository, IntrusionRepository
+[x] data/migrations/002_create_rbac.sql
+    [x] roles
+    [x] permissions (15 predefinidas)
+    [x] role_permissions N:M
+    [x] seed: admin, operator, viewer
 
-[ ] Migraciones SQLx:
-    [ ] data/migrations/20260305135148_create_users_table.sql
-    [ ] data/migrations/20260305135149_create_rbac.sql
-    [ ] data/migrations/20260305135150_create_tokens.sql
-    [ ] data/migrations/20260305135151_create_audit_logs.sql
-    [ ] data/migrations/20260305135152_seed_system_data.sql
-    [ ] data/migrations/20260305135153_create_sessions.sql
+[x] data/migrations/003_create_sessions.sql
+    [x] sessions con expiry
+
+[x] data/migrations/004_create_tokens.sql
+    [x] tokens para email/password reset
+    [x] ENUM token_purpose
+
+[x] data/migrations/005_create_audit_logs.sql
+    [x] audit_logs con JSONB details
+    [x] índices para búsqueda
+
+[x] data/migrations/006_seed_system_data.sql
+    [x] usuario admin inicial
+
+[x] data/migrations/010_create_sedes.sql
+    [x] sedes del Beni (8 predefinidas)
+
+[x] data/migrations/011_create_devices.sql
+    [x] devices con ENUMs device_type, device_status
+
+[x] data/migrations/012_create_device_links.sql
+    [x] device_links con CHECK constraint
+
+[x] data/migrations/013_create_metrics.sql
+    [x] metric_readings para monitoreo
+
+[x] data/migrations/014_create_alerts.sql
+    [x] alerts con ENUMs alert_type, severity, status
+
+[x] data/migrations/015_create_intrusions.sql
+    [x] intrusion_events con ENUM intrusion_status
 ```
 
 ### I.3 — Entidades de Dominio (Completado ✅)
@@ -117,7 +142,7 @@
 ### I.4 — Próximos Pasos
 
 ```
-1. [ ] Crear migraciones SQLx para PostgreSQL
+1. [x] Crear migraciones SQLx para PostgreSQL ✅
 2. [ ] Implementar repositories concretos en database/
 3. [ ] Crear handlers HTTP en infrastructure/
 4. [ ] Middleware de auth (PASETO)
@@ -125,38 +150,22 @@
 
 ---
 
-## Diagrama de Dependencias Actualizado
+## Commits Realizados
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│  crates/domain                                              │
-│  (thiserror, uuid, time, serde)                          │
-│  └─ 11 entidades + 9 puertos                              │
-│  └─ ADR 0001, 0006, 0008, 0020                          │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│  crates/application                                         │
-│  (domain + uuid)                                           │
-└─────────────────────┬───────────────────────────────────────┘
-                      │
-                      ▼
-┌─────────────────────────────────────────────────────────────┐
-│  crates/database (impl pending)                            │
-│  (domain + sqlx)                                           │
-└─────────────────────────────────────────────────────────────┘
-```
+| Commit | Descripción |
+|--------|-------------|
+| `6e7fd3e` | feat(genesis): workspace completo con 12 crates y 3 apps |
+| `7731871` | feat(backend): B.1 entidades de dominio + puertos/repositorios |
+| `0895b26` | feat(backend): B.2 migraciones SQLx |
 
 ---
 
-## Commit
+## Siguiente Fase
+
+**Bloque II:** API — Axum + Middleware + Errores
 
 ```
-feat(backend): B.1 entidades de dominio + puertos/repositorios
-
-- 11 entidades: User, Role, Session, AuditLog, Token, Alert, IntrusionEvent, Device, MetricReading, DeviceLink, Sede
-- 9 puertos traits síncronos: UserRepository, SessionRepository, AuditRepository, TokenRepository, DeviceRepository, SedeRepository, MetricsRepository, AlertRepository, IntrusionRepository
-- Domain limpio: sin sqlx ni axum
-- Soft Delete preparado en todas las entidades
+B.3 Handlers HTTP (CRUD sedes, dispositivos, métricas)
+B.4 OpenAPI con Utoipa + Scalar
+B.5 Middleware auth (PASETO)
 ```
