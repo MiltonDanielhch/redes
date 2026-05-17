@@ -2,7 +2,7 @@
 //!
 //! Descripción: Handlers HTTP para operaciones con dispositivos.
 //!
-//! ADRs relacionados: 0003 (Axum), 0020
+//! ADRs relacionados: 0003 (Axum), 0020, 0016 (OpenAPI)
 
 use axum::{
     extract::{Path, State},
@@ -11,47 +11,129 @@ use axum::{
 use std::sync::Arc;
 
 use crate::dto::{device::{CreateDeviceRequest, UpdateDeviceRequest, DeviceResponse}, error::ApiErrorResponse};
+use crate::state::AppState;
 use domain::entities::{Device, DeviceType, DeviceStatus};
 use domain::ports::DeviceRepository;
 
-pub struct DeviceHandlers<R: DeviceRepository> {
-    repository: Arc<R>,
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices",
+    responses(
+        (status = 200, description = "Lista de dispositivos", body = Vec<DeviceResponse>)
+    ),
+    tag = "devices"
+)]
+pub async fn list_devices(
+    State(state): State<Arc<AppState>>,
+) -> Result<Json<Vec<DeviceResponse>>, ApiErrorResponse> {
+    let devices = state.device_repository.list()
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
+
+    let response: Vec<DeviceResponse> = devices.into_iter().map(|d| d.into()).collect();
+    Ok(Json(response))
 }
 
-impl<R: DeviceRepository> DeviceHandlers<R> {
-    pub fn new(repository: Arc<R>) -> Self {
-        Self { repository }
+#[utoipa::path(
+    get,
+    path = "/api/v1/devices/{id}",
+    params(
+        ("id" = String, Path, description = "UUID del dispositivo")
+    ),
+    responses(
+        (status = 200, description = "Dispositivo encontrado", body = DeviceResponse),
+        (status = 404, description = "Dispositivo no encontrado")
+    ),
+    tag = "devices"
+)]
+pub async fn get_device(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
+    let uuid = uuid::Uuid::parse_str(&id)
+        .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
+
+    let device = state.device_repository.find_by_id(uuid)
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?
+        .ok_or_else(|| ApiErrorResponse::not_found("Device"))?;
+
+    Ok(Json(device.into()))
+}
+
+#[utoipa::path(
+    post,
+    path = "/api/v1/devices",
+    request_body = CreateDeviceRequest,
+    responses(
+        (status = 201, description = "Dispositivo creado", body = DeviceResponse),
+        (status = 400, description = "Datos inválidos")
+    ),
+    tag = "devices"
+)]
+pub async fn create_device(
+    State(state): State<Arc<AppState>>,
+    Json(payload): Json<CreateDeviceRequest>,
+) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
+    let device_type = match payload.device_type.as_str() {
+        "Switch" => DeviceType::Switch,
+        "AccessPoint" => DeviceType::AccessPoint,
+        "Router" => DeviceType::Router,
+        "Firewall" => DeviceType::Firewall,
+        "Server" => DeviceType::Server,
+        "Ups" => DeviceType::Ups,
+        "Camera" => DeviceType::Camera,
+        "WirelessLink" => DeviceType::WirelessLink,
+        _ => return Err(ApiErrorResponse::bad_request("Invalid device_type")),
+    };
+
+    let sede_id = uuid::Uuid::parse_str(&payload.sede_id)
+        .map_err(|_| ApiErrorResponse::bad_request("Invalid sede_id format"))?;
+
+    let device = Device::new(
+        payload.hostname,
+        payload.ip_address,
+        device_type,
+        sede_id,
+    );
+
+    let created = state.device_repository.save(&device)
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
+
+    Ok(Json(created.into()))
+}
+
+#[utoipa::path(
+    put,
+    path = "/api/v1/devices/{id}",
+    params(
+        ("id" = String, Path, description = "UUID del dispositivo")
+    ),
+    request_body = UpdateDeviceRequest,
+    responses(
+        (status = 200, description = "Dispositivo actualizado", body = DeviceResponse),
+        (status = 404, description = "Dispositivo no encontrado")
+    ),
+    tag = "devices"
+)]
+pub async fn update_device(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+    Json(payload): Json<UpdateDeviceRequest>,
+) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
+    let uuid = uuid::Uuid::parse_str(&id)
+        .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
+
+    let mut device = state.device_repository.find_by_id(uuid)
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?
+        .ok_or_else(|| ApiErrorResponse::not_found("Device"))?;
+
+    if let Some(hostname) = payload.hostname {
+        device.hostname = hostname;
     }
-
-    pub async fn list(
-        State(repository): State<Arc<R>>,
-    ) -> Result<Json<Vec<DeviceResponse>>, ApiErrorResponse> {
-        let devices = repository.list()
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
-
-        let response: Vec<DeviceResponse> = devices.into_iter().map(|d| d.into()).collect();
-        Ok(Json(response))
+    if let Some(ip_address) = payload.ip_address {
+        device.ip_address = ip_address;
     }
-
-    pub async fn get(
-        State(repository): State<Arc<R>>,
-        Path(id): Path<String>,
-    ) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
-        let uuid = uuid::Uuid::parse_str(&id)
-            .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
-
-        let device = repository.find_by_id(uuid)
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?
-            .ok_or_else(|| ApiErrorResponse::not_found("Device"))?;
-
-        Ok(Json(device.into()))
-    }
-
-    pub async fn create(
-        State(repository): State<Arc<R>>,
-        Json(payload): Json<CreateDeviceRequest>,
-    ) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
-        let device_type = match payload.device_type.as_str() {
+    if let Some(device_type_str) = payload.device_type {
+        device.device_type = match device_type_str.as_str() {
             "Switch" => DeviceType::Switch,
             "AccessPoint" => DeviceType::AccessPoint,
             "Router" => DeviceType::Router,
@@ -62,81 +144,45 @@ impl<R: DeviceRepository> DeviceHandlers<R> {
             "WirelessLink" => DeviceType::WirelessLink,
             _ => return Err(ApiErrorResponse::bad_request("Invalid device_type")),
         };
-
-        let sede_id = uuid::Uuid::parse_str(&payload.sede_id)
-            .map_err(|_| ApiErrorResponse::bad_request("Invalid sede_id format"))?;
-
-        let device = Device::new(
-            payload.hostname,
-            payload.ip_address,
-            device_type,
-            sede_id,
-        );
-
-        let created = repository.save(&device)
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
-
-        Ok(Json(created.into()))
+    }
+    if let Some(status_str) = payload.status {
+        device.status = match status_str.as_str() {
+            "Active" => DeviceStatus::Active,
+            "Offline" => DeviceStatus::Offline,
+            "Maintenance" => DeviceStatus::Maintenance,
+            _ => return Err(ApiErrorResponse::bad_request("Invalid status")),
+        };
     }
 
-    pub async fn update(
-        State(repository): State<Arc<R>>,
-        Path(id): Path<String>,
-        Json(payload): Json<UpdateDeviceRequest>,
-    ) -> Result<Json<DeviceResponse>, ApiErrorResponse> {
-        let uuid = uuid::Uuid::parse_str(&id)
-            .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
+    let updated = state.device_repository.save(&device)
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
 
-        let mut device = repository.find_by_id(uuid)
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?
-            .ok_or_else(|| ApiErrorResponse::not_found("Device"))?;
+    Ok(Json(updated.into()))
+}
 
-        if let Some(hostname) = payload.hostname {
-            device.hostname = hostname;
-        }
-        if let Some(ip_address) = payload.ip_address {
-            device.ip_address = ip_address;
-        }
-        if let Some(device_type_str) = payload.device_type {
-            device.device_type = match device_type_str.as_str() {
-                "Switch" => DeviceType::Switch,
-                "AccessPoint" => DeviceType::AccessPoint,
-                "Router" => DeviceType::Router,
-                "Firewall" => DeviceType::Firewall,
-                "Server" => DeviceType::Server,
-                "Ups" => DeviceType::Ups,
-                "Camera" => DeviceType::Camera,
-                "WirelessLink" => DeviceType::WirelessLink,
-                _ => return Err(ApiErrorResponse::bad_request("Invalid device_type")),
-            };
-        }
-        if let Some(status_str) = payload.status {
-            device.status = match status_str.as_str() {
-                "Active" => DeviceStatus::Active,
-                "Offline" => DeviceStatus::Offline,
-                "Maintenance" => DeviceStatus::Maintenance,
-                _ => return Err(ApiErrorResponse::bad_request("Invalid status")),
-            };
-        }
+#[utoipa::path(
+    delete,
+    path = "/api/v1/devices/{id}",
+    params(
+        ("id" = String, Path, description = "UUID del dispositivo")
+    ),
+    responses(
+        (status = 200, description = "Dispositivo eliminado"),
+        (status = 404, description = "Dispositivo no encontrado")
+    ),
+    tag = "devices"
+)]
+pub async fn delete_device(
+    State(state): State<Arc<AppState>>,
+    Path(id): Path<String>,
+) -> Result<Json<serde_json::Value>, ApiErrorResponse> {
+    let uuid = uuid::Uuid::parse_str(&id)
+        .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
 
-        let updated = repository.save(&device)
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
+    state.device_repository.soft_delete(uuid)
+        .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
 
-        Ok(Json(updated.into()))
-    }
-
-    pub async fn delete(
-        State(repository): State<Arc<R>>,
-        Path(id): Path<String>,
-    ) -> Result<Json<serde_json::Value>, ApiErrorResponse> {
-        let uuid = uuid::Uuid::parse_str(&id)
-            .map_err(|_| ApiErrorResponse::bad_request("Invalid UUID format"))?;
-
-        repository.soft_delete(uuid)
-            .map_err(|e| ApiErrorResponse::new(format!("Database error: {}", e)))?;
-
-        Ok(Json(serde_json::json!({ "message": "Device deleted" })))
-    }
+    Ok(Json(serde_json::json!({ "message": "Device deleted" })))
 }
 
 impl From<Device> for DeviceResponse {

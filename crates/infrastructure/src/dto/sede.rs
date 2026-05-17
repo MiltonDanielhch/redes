@@ -42,16 +42,3 @@ pub struct SedeResponse {
     #[schema(example = "2024-01-01T00:00:00Z")]
     pub updated_at: String,
 }
-
-impl From<domain::entities::Sede> for SedeResponse {
-    fn from(sede: domain::entities::Sede) -> Self {
-        Self {
-            id: sede.id.to_string(),
-            nombre: sede.nombre,
-            ubicacion: sede.ubicacion,
-            secretaria: sede.secretaria,
-            created_at: sede.created_at.to_string(),
-            updated_at: sede.updated_at.to_string(),
-        }
-    }
-}
