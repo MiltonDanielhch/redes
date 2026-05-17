@@ -9,11 +9,13 @@ use axum::{
     Json,
 };
 use serde_json::json;
+use utoipa::ToSchema;
 
-#[derive(Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize, ToSchema)]
 pub struct ApiErrorResponse {
+    #[schema(example = "Resource not found")]
     pub error: String,
-    #[serde(skip_serializing_if = "Option::is_none")]
+    #[schema(example = "The requested item does not exist", nullable = true)]
     pub details: Option<String>,
 }
 
