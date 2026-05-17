@@ -1,0 +1,10 @@
+# SQLx CLI Configuration
+# Ubicación: `sqlx.toml`
+#
+# ADR 0005 (Migraciones)
+
+[default]
+ DATABASE_URL = "postgres://postgres:12345678@localhost:5432/redes"
+
+[migrate]
+ migrations_dir = "data/migrations"

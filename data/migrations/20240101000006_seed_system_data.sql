@@ -1,4 +1,4 @@
--- Ubicación: `data/migrations/006_seed_system_data.sql`
+-- Ubicación: `data/migrations/20240101000006_seed_system_data.sql`
 --
 -- Descripción: Seed data - usuario admin inicial
 --
@@ -10,12 +10,11 @@
 -- Hash generado con argon2 simple (cambiar en producción)
 INSERT INTO users (email, password_hash, name) VALUES
     ('admin@redes.gob.bo', '$argon2id$v=19$m=19456,t=2,p=1$YWRtaW4xMjM0NTY3ODkw$qIljX5KQ9P8Z7H2mN1xT4Q', 'Administrador del Sistema')
-ON CONFLICT (email) DO NOTHING
-WHERE deleted_at IS NULL;
+ON CONFLICT (email) DO NOTHING;
 
 -- Asignar rol admin al usuario admin
 WITH admin_user AS (
-    SELECT id FROM users WHERE email = 'admin@redes.gob.bo' AND deleted_at IS NULL
+    SELECT id FROM users WHERE email = 'admin@redes.gob.bo'
 ),
 admin_role AS (
     SELECT id FROM roles WHERE name = 'admin'

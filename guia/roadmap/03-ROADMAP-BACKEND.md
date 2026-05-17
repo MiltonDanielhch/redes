@@ -220,18 +220,19 @@
 > **Pendiente:** API PASETO incompatible
 > **ADR 0008, 0006, 0007, 0009**
 
-### III.1 — Auth (PASETO v4) ⚠️
+### III.1 — Auth (PASETO v4) ✅
 
 > **Referencia:** ADR 0008
+> **Estado:** ✅ Implementado con rusty_paseto 0.10.0 + argon2 0.6.0-rc.8
 
 ```
-[ ] crates/auth/src/
-    ⚠️ PASETO real pendiente - API incompatible con 0.7.8
-    ⚠️ Argon2id simplificado - API inestable en 0.6.0-rc.8
+[x] crates/auth/src/
+    ✅ PASETO v4 Local - rusty_paseto 0.10.0
+    ✅ Argon2id - argon2 0.6.0-rc.8
 
-[ ] crates/infrastructure/src/middleware/auth.rs
-    [ ] AuthMiddleware para validar tokens PASETO
-    [ ] ExtractAuth para obtener user_id del token
+[x] crates/infrastructure/src/middleware/auth.rs
+    [x] AuthMiddleware para validar tokens PASETO
+    [x] ExtractAuth para obtener user_id del token
 ```
 
 ### III.2 — RBAC Middleware ⚠️
@@ -244,14 +245,14 @@
 [ ] Admin exemption para /health y /ready
 ```
 
-### III.3 — Audit Logging ⚠️
+### III.3 — Audit Logging ✅
 
 > **Referencia:** ADR 0006
 
 ```
-[ ] ActionLogger middleware para capturar requests
-[ ] Logging de: user_id, action, resource, ip, user_agent
-[ ] Async write a PostgreSQL (no bloquear request)
+[x] ActionLogger middleware para capturar requests
+[x] Logging de: user_id, action, resource, ip, user_agent
+[x] Async write a PostgreSQL (no bloquear request)
 ```
 
 ### III.4 — Rate Limiting ⚠️

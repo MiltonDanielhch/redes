@@ -64,25 +64,41 @@ git commit --allow-empty -m "test genesis"
 
 > **Referencia:** ADR 0001 (Hexagonal), ADR 0004 (PostgreSQL), ADR 0006 (RBAC)
 
-### Las migraciones
+### Las migraciones (PostgreSQL)
 
-**Ejecutar migraciones:**
+**Opción 1: Con sqlx-cli (requiere instalar con `--features postgres`):**
 ```bash
-just migrate
+# Primero configura PGPASSWORD para evitar pedir contraseña
+export PGPASSWORD=12345678
+
+# Ejecutar migraciones
+sqlx migrate run
 ```
-**Esperado:** PostgreSQL migraciones aplicadas
+
+**Opción 2: Directamente con psql (usar si sqlx-cli no tiene soporte postgres):**
+```bash
+export PGPASSWORD=12345678
+
+# Ejecutar todas las migraciones en orden
+for f in data/migrations/*.sql; do psql -U postgres -h localhost -d redes -f "$f"; done
+
+# O interactivo desde psql:
+# \i data/migrations/20240101000001_create_users.sql
+# \i data/migrations/20240101000002_create_rbac.sql
+# ... (continuar en orden numérico)
+```
 
 **Verificar tablas creadas:**
 ```bash
-psql -U postgres -d monitoreo -c "\dt"
+psql -U postgres -d redes -c "\dt"
 ```
 **Esperado:** users, roles, permissions, sessions, audit_logs, sedes, devices, etc.
 
 **Verificar que el admin existe:**
 ```bash
-psql -U postgres -d monitoreo -c "SELECT email FROM users;"
+psql -U postgres -d redes -c "SELECT email FROM users;"
 ```
-**Esperado:** `admin@admin.com`
+**Esperado:** `admin@redes.gob.bo`
 
 ### El dominio no tiene dependencias externas
 
@@ -146,7 +162,7 @@ echo $TOKEN | cut -c1-10
 
 # 6. Soft Delete — verificar que no hace DELETE real
 curl -X DELETE -H "Authorization: Bearer $ADMIN_TOKEN"   http://localhost:3000/api/v1/users/USER_ID
-psql -U postgres -d monitoreo -c "SELECT deleted_at FROM users WHERE email='test@example.com';"
+psql -U postgres -d redes -c "SELECT deleted_at FROM users WHERE email='test@example.com';"
 # Esperado: fecha ISO — NO es NULL
 ```
 
@@ -179,7 +195,7 @@ curl http://localhost:3000/openapi.json | jq '.paths | keys[]'
 curl -X POST http://localhost:3000/auth/register   -H "Content-Type: application/json"   -d '{"email":"job-test@example.com","password":"password123"}'
 
 # Verificar jobs en PostgreSQL
-psql -U postgres -d monitoreo -c "SELECT job_type, status FROM jobs ORDER BY created_at DESC LIMIT 5;"
+psql -U postgres -d redes -c "SELECT job_type, status FROM jobs ORDER BY created_at DESC LIMIT 5;"
 
 # 2. Verificar logs
 just dev-api 2>&1 | grep -i "job"
@@ -235,9 +251,25 @@ cargo clippy --all-targets -- -D warnings
 [ ] just audit → cargo deny 0.19.6 + cargo audit sin issues
 [ ] grep "jsonwebtoken" → cero resultados
 [ ] grep "DELETE FROM users" → cero resultados
-[ ] PostgreSQL conectividad verificada
+[ ] PostgreSQL conectividad verificada (export PGPASSWORD=12345678 && psql -U postgres -d redes -c "\dt")
 [ ] Healthchecks.io pings configurados
 [ ] curl /health → 200 OK
+```
+
+---
+
+## Configuración de entorno para PostgreSQL
+
+```bash
+# Configurar contraseña para evitar ingreso repetido (MINGW64/Git Bash)
+export PGPASSWORD=12345678
+
+# Configurar permanentemente en Windows (PowerShell)
+# Set-Item -Path Env:PGPASSWORD -Value "12345678"
+
+# Archivo .pgpass para autenticación automática (MINGW64/Git Bash)
+echo "localhost:5432:*:postgres:12345678" > ~/.pgpass
+chmod 600 ~/.pgpass
 ```
 
 ---
