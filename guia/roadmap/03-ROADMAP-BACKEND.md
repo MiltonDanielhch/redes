@@ -31,15 +31,20 @@
 | | | [x] B.3 Handlers |
 | | | [x] B.3 Rutas + AppState |
 | | | [x] B.3 Middleware tracing + CORS |
-| III | Seguridad — Auth + RBAC + Audit | [ ] |
+| III | Seguridad — Auth + RBAC + Audit | [x] 100% |
+| | | [x] B.3 PASETO + RBAC + Audit |
 | IV | OpenAPI + Scalar | [x] 100% |
 | | | [x] DTOs con ToSchema |
 | | | [x] Handlers con #[utoipa::path] |
 | | | [x] OpenApi derive |
-| V | Async — Jobs + Cache + Email | [ ] |
+| V | Async — Jobs + Cache + Email | [x] 75% |
+| | | [x] V.2 Cache Moka |
+| | | [x] V.3 Healthchecks |
+| | | [x] V.4 Email Resend |
+| | | [~] V.1 Jobs (bloqueado Apalis) |
 | VI | Observabilidad | [ ] |
 | VII | Monitoreo — Inventario + Métricas + Topología | [ ] |
-| **Backend Core** | | [x] **50%** |
+| **Backend Core** | | [x] **~65%** |
 
 ---
 
@@ -288,7 +293,7 @@
 
 ## Bloque V — Async (Jobs + Cache + Email) 🔥
 
-> **Pendiente**
+> **En progreso:** V.1 Jobs bloqueado (Apalis), V.2-V.4 completados
 > **ADR 0015, 0014, 0011**
 
 ### V.1 — Background Jobs ⚠️
@@ -327,15 +332,17 @@
 [x] Integración con AppState
 ```
 
-### V.4 — Email (Resend) ⚠️
+### V.4 — Email (Resend) ✅
 
+> **Completado:** 2026-05-17
 > **Referencia:** ADR 0014
 
 ```
-[ ] crates/email/
-    [ ] Resend client para notificaciones
-    [ ] Templates: alert_notification, password_reset
-    [ ] Cola async para no bloquear
+[x] crates/email/ - Cliente Resend
+[x] ResendClient para envío via API REST
+[x] EmailQueue con mpsc channel para envío async
+[x] Templates: alert_notification, password_reset
+[x] EmailError y EmailJob/EmailJobTemplate enums
 ```
 
 ---
