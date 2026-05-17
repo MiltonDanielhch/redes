@@ -12,6 +12,7 @@ edition = "2024"
 [dependencies]
 application = { path = "../application" }
 database = { path = "../database" }
+domain = { path = "../domain" }
 auth = { path = "../auth" }
 storage = { path = "../storage" }
 inventory = { path = "../inventory" }
@@ -32,3 +33,4 @@ tracing-subscriber = { workspace = true }
 toml = { workspace = true }
 serde = { workspace = true }
 serde_json = { workspace = true }
+uuid = { workspace = true }
