@@ -6,6 +6,12 @@
 		"src/routes/(auth)/+layout.ts"
 	],
 	"/": [],
+	"/(dashboard)/admin/audit": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(dashboard)/admin/users": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
 	"/(dashboard)/alerts": [
 		"src/routes/(dashboard)/+layout.ts"
 	],
