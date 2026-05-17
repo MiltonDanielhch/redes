@@ -25,6 +25,7 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/api/v1/sedes/:id", get(get_sede).put(update_sede))
         .route("/api/v1/devices", get(list_devices).post(create_device))
         .route("/api/v1/devices/:id", get(get_device).put(update_device).delete(delete_device))
+        .layer(crate::middleware::tracing_layer())
         .with_state(Arc::new(AppState::new(
             Arc::new(MockSedeRepository),
             Arc::new(MockDeviceRepository),

@@ -4,24 +4,8 @@
 //!
 //! ADRs relacionados: 0003 (Axum 0.8)
 
-use axum::{extract::Request, middleware::Next, response::Response};
-use std::time::Instant;
+use tower_http::trace::TraceLayer;
 
-pub async fn tracing_middleware(request: Request, next: Next) -> Response {
-    let start = Instant::now();
-    let method = request.method().clone();
-    let uri = request.uri().clone();
-
-    let response = next.run(request).await;
-
-    let duration = start.elapsed();
-    tracing::info!(
-        method = %method,
-        uri = %uri,
-        status = %response.status(),
-        duration_ms = duration.as_millis(),
-        "HTTP request"
-    );
-
-    response
+pub fn tracing_layer() -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>> {
+    TraceLayer::new_for_http()
 }
