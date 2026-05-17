@@ -2,9 +2,63 @@
 <!-- Descripción: Dashboard principal con resumen de métricas, alertas y estado de red -->
 <!-- ADRs relacionados: 0017 (Frontend SvelteKit), 0020 (Monitoreo Regional) -->
 <script lang="ts">
-	import { Building2, Monitor, AlertTriangle, TrendingUp, Clock, Activity } from 'lucide-svelte';
-	import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '$lib/components/ui/card';
-	import { Badge } from '$lib/components/ui/badge';
+	import StatsOverview from '$lib/components/dashboard/StatsOverview.svelte';
+	import AlertSummary from '$lib/components/dashboard/AlertSummary.svelte';
+	import DeviceStatusChart from '$lib/components/dashboard/DeviceStatusChart.svelte';
+	import NetworkHealth from '$lib/components/dashboard/NetworkHealth.svelte';
+	import AgentStatusWidget from '$lib/components/dashboard/AgentStatusWidget.svelte';
+	import { createQuery } from '@tanstack/svelte-query';
+	import type { AlertResponse } from '$lib/generated/api-types';
+
+	let alertsQuery = createQuery({
+		queryKey: ['alerts', 'recent'],
+		queryFn: async (): Promise<AlertResponse[]> => {
+			const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/alerts?limit=5&severity=Critical,High`);
+			if (!response.ok) throw new Error('Failed to fetch alerts');
+			const data = await response.json();
+			return data.alerts || [];
+		},
+		staleTime: 30 * 1000,
+		refetchInterval: 30 * 1000,
+	});
+
+	let deviceStatusQuery = createQuery({
+		queryKey: ['devices', 'status-count'],
+		queryFn: async () => {
+			const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/devices/status-count`);
+			if (!response.ok) throw new Error('Failed to fetch device status');
+			return response.json();
+		},
+		staleTime: 60 * 1000,
+	});
+
+	let networkHealthQuery = createQuery({
+		queryKey: ['network', 'health'],
+		queryFn: async () => {
+			const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/network/health`);
+			if (!response.ok) throw new Error('Failed to fetch network health');
+			return response.json();
+		},
+		staleTime: 60 * 1000,
+	});
+
+	let agentsQuery = createQuery({
+		queryKey: ['agents', 'recent'],
+		queryFn: async () => {
+			const response = await fetch(`${import.meta.env.PUBLIC_API_URL || 'http://localhost:8080'}/api/v1/agents?limit=5`);
+			if (!response.ok) throw new Error('Failed to fetch agents');
+			return response.json();
+		},
+		staleTime: 60 * 1000,
+	});
+
+	function handleAlertClick(alertId: string) {
+		window.location.href = `/dashboard/alerts?id=${alertId}`;
+	}
+
+	function handleAgentClick(agentId: string) {
+		window.location.href = `/dashboard/agents?id=${agentId}`;
+	}
 </script>
 
 <div class="space-y-6">
@@ -13,119 +67,34 @@
 		<p class="text-muted-foreground">Resumen del monitoreo de infraestructura regional</p>
 	</div>
 
-	<div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle class="text-sm font-medium">Sedes Activas</CardTitle>
-				<Building2 class="h-4 w-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">12</div>
-				<p class="text-xs text-muted-foreground">+2 desde el mes pasado</p>
-			</CardContent>
-		</Card>
+	<StatsOverview />
 
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle class="text-sm font-medium">Dispositivos Online</CardTitle>
-				<Monitor class="h-4 w-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">847</div>
-				<p class="text-xs text-muted-foreground">98.2% disponibilidad</p>
-			</CardContent>
-		</Card>
+	<div class="grid gap-4 md:grid-cols-2">
+		<AlertSummary
+			alerts={$alertsQuery.data}
+			loading={$alertsQuery.isLoading}
+			onAlertClick={handleAlertClick}
+		/>
 
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle class="text-sm font-medium">Alertas Pendientes</CardTitle>
-				<AlertTriangle class="h-4 w-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">23</div>
-				<p class="text-xs text-muted-foreground">5 críticas</p>
-			</CardContent>
-		</Card>
-
-		<Card>
-			<CardHeader class="flex flex-row items-center justify-between space-y-0 pb-2">
-				<CardTitle class="text-sm font-medium">Ancho de Banda</CardTitle>
-				<TrendingUp class="h-4 w-4 text-muted-foreground" />
-			</CardHeader>
-			<CardContent>
-				<div class="text-2xl font-bold">4.2 Gbps</div>
-				<p class="text-xs text-muted-foreground">+12% promedio</p>
-			</CardContent>
-		</Card>
+		<DeviceStatusChart
+			data={$deviceStatusQuery.data}
+			loading={$deviceStatusQuery.isLoading}
+		/>
 	</div>
 
 	<div class="grid gap-4 md:grid-cols-2">
-		<Card>
-			<CardHeader>
-				<CardTitle>Actividad Reciente</CardTitle>
-				<CardDescription>Últimas alertas y eventos</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<div class="space-y-4">
-					<div class="flex items-center gap-4">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full bg-destructive/10">
-							<AlertTriangle class="h-4 w-4 text-destructive" />
-						</div>
-						<div class="flex-1 space-y-1">
-							<p class="text-sm font-medium">Switch SW-CENTRAL-01 offline</p>
-							<p class="text-xs text-muted-foreground">Hace 5 minutos</p>
-						</div>
-						<Badge variant="destructive">Crítica</Badge>
-					</div>
-					<div class="flex items-center gap-4">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full bg-yellow-500/10">
-							<Clock class="h-4 w-4 text-yellow-500" />
-						</div>
-						<div class="flex-1 space-y-1">
-							<p class="text-sm font-medium">Alta latencia en RBN-BO-001</p>
-							<p class="text-xs text-muted-foreground">Hace 15 minutos</p>
-						</div>
-						<Badge variant="default">Media</Badge>
-					</div>
-					<div class="flex items-center gap-4">
-						<div class="flex h-9 w-9 items-center justify-center rounded-full bg-green-500/10">
-							<Activity class="h-4 w-4 text-green-500" />
-						</div>
-						<div class="flex-1 space-y-1">
-							<p class="text-sm font-medium">Conexión restaurada</p>
-							<p class="text-xs text-muted-foreground">Hace 1 hora</p>
-						</div>
-						<Badge variant="secondary">Info</Badge>
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+		<NetworkHealth
+			latencyMs={$networkHealthQuery.data?.latency_ms}
+			packetLossPct={$networkHealthQuery.data?.packet_loss_pct}
+			uptimePct={$networkHealthQuery.data?.uptime_pct}
+			trend={$networkHealthQuery.data?.trend}
+			loading={$networkHealthQuery.isLoading}
+		/>
 
-		<Card>
-			<CardHeader>
-				<CardTitle>Estado de la Red</CardTitle>
-				<CardDescription>Métricas en tiempo real</CardDescription>
-			</CardHeader>
-			<CardContent>
-				<div class="space-y-4">
-					<div class="flex items-center justify-between">
-						<span class="text-sm">CPU Promedio</span>
-						<span class="text-sm font-medium">45%</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm">Memoria Usada</span>
-						<span class="text-sm font-medium">62%</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm">Paquetes Perdidos</span>
-						<span class="text-sm font-medium text-green-500">0.1%</span>
-					</div>
-					<div class="flex items-center justify-between">
-						<span class="text-sm">Uptime Promedio</span>
-						<span class="text-sm font-medium">99.7%</span>
-					</div>
-				</div>
-			</CardContent>
-		</Card>
+		<AgentStatusWidget
+			agents={$agentsQuery.data}
+			loading={$agentsQuery.isLoading}
+			onAgentClick={handleAgentClick}
+		/>
 	</div>
 </div>

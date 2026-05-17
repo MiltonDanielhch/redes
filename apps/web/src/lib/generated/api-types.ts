@@ -183,3 +183,17 @@ export interface AuditLogEntry {
 	ip_address: string;
 	created_at: string;
 }
+
+export interface AgentResponse {
+	id: string;
+	name: string;
+	hostname: string;
+	ip_address: string;
+	port: number;
+	agent_type: string;
+	status: string;
+	version: string;
+	last_seen_at: string;
+	created_at: string;
+	updated_at: string;
+}

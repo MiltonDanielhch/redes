@@ -22,7 +22,7 @@
 | FE.I | Fundación — SvelteKit + Tooling | [x] |
 | FE.II | Tipos generados + Estado + Validación | [x] |
 | FE.III | Layouts, navegación y SSR | [x] |
-| FE.IV | Dashboard de Monitoreo | [ ] |
+| FE.IV | Dashboard de Monitoreo | [x] |
 | FE.V | Inventario y Dispositivos | [ ] |
 | FE.VI | Métricas, Gráficos y SSE | [ ] |
 | FE.VII | Topología de Red | [ ] |
