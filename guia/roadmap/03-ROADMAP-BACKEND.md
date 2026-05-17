@@ -235,14 +235,15 @@
     [x] ExtractAuth para obtener user_id del token
 ```
 
-### III.2 — RBAC Middleware ⚠️
+### III.2 — RBAC Middleware ✅
 
 > **Referencia:** ADR 0006
 
 ```
-[ ] Middleware de autorización basado en roles
-[ ] Permisos: resource:action (ej: devices:read)
-[ ] Admin exemption para /health y /ready
+[x] Middleware de autorización basado en roles
+[x] Permisos: resource:action (ej: devices:read)
+[x] Admin exemption para /health y /ready
+[x] RbacChecker con UserPermissions y Permission parsing
 ```
 
 ### III.3 — Audit Logging ✅

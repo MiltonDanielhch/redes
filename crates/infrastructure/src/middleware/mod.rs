@@ -9,6 +9,7 @@ use tower_http::trace::TraceLayer;
 
 pub mod audit_channel;
 pub mod action_logger;
+pub mod rbac;
 
 pub fn tracing_layer() -> TraceLayer<tower_http::classify::SharedClassifier<tower_http::classify::ServerErrorsAsFailures>> {
     TraceLayer::new_for_http()
