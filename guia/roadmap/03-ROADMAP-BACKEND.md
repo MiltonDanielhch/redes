@@ -30,13 +30,16 @@
 | | | [x] B.3 DTOs |
 | | | [x] B.3 Handlers |
 | | | [x] B.3 Rutas + AppState |
-| | | [x] B.3 Middleware tracing |
+| | | [x] B.3 Middleware tracing + CORS |
 | III | Seguridad — Auth + RBAC + Audit | [ ] |
-| IV | OpenAPI + Scalar | [ ] |
+| IV | OpenAPI + Scalar | [x] 100% |
+| | | [x] DTOs con ToSchema |
+| | | [x] Handlers con #[utoipa::path] |
+| | | [x] OpenApi derive |
 | V | Async — Jobs + Cache + Email | [ ] |
 | VI | Observabilidad | [ ] |
 | VII | Monitoreo — Inventario + Métricas + Topología | [ ] |
-| **Backend Core** | | [x] **40%** |
+| **Backend Core** | | [x] **50%** |
 
 ---
 
