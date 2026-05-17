@@ -4,4 +4,5 @@
 //!
 //! ADRs relacionados: 0003 (Axum)
 
+pub mod device_handler;
 pub mod sede_handler;

@@ -2,11 +2,11 @@
 //!
 //! Descripción: Definición de rutas HTTP de la API usando Axum 0.8.
 //!
-//! ADRs relacionados: 0003 (Axum 0.8)
+//! ADRs relacionados: 0003 (Axum 0.8), 0020
 
 use axum::{
     Router,
-    routing::get,
+    routing::{get, post, put, delete},
 };
 use tower_http::cors::{CorsLayer, Any};
 
