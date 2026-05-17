@@ -42,9 +42,12 @@
 | | | [x] V.3 Healthchecks |
 | | | [x] V.4 Email Resend |
 | | | [~] V.1 Jobs (bloqueado Apalis) |
-| VI | Observabilidad | [ ] |
+| VI | Observabilidad | [x] 100% |
+| | | [x] VI.1 Tracing + OpenTelemetry |
+| | | [x] VI.2 Metrics Prometheus |
+| | | [x] VI.3 Logging estructurado |
 | VII | Monitoreo — Inventario + Métricas + Topología | [ ] |
-| **Backend Core** | | [x] **~65%** |
+| **Backend Core** | | [x] **~80%** |
 
 ---
 
@@ -349,22 +352,17 @@
 
 ## Bloque VI — Observabilidad 🔥
 
-> **Pendiente**
+> **Completado:** 2026-05-17
 > **ADR 0011**
 
 ```
-[ ] Tracing distribuido
-    [ ] OpenTelemetry + Jaeger/Tempo
-    [ ] Trace IDs en headers (X-Trace-ID)
-
-[ ] Métricas
-    [ ] tower_http metrics
-    [ ] /metrics endpoint (Prometheus)
-
-[ ] Logging
-    [ ] JSON structured logs
-    [ ] Log levels: ERROR, WARN, INFO, DEBUG
-    [ ] Sensitive data redaction
+[x] Tracing distribuido con OpenTelemetry
+[x] Trace IDs en headers (X-Trace-ID)
+[x] Métricas Prometheus con metrics crate
+[x] /metrics endpoint (Prometheus)
+[x] Logging estructurado JSON
+[x] Sensitive data redaction
+[x] crates/observability/
 ```
 
 ---
