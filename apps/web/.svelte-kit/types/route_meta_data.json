@@ -26,5 +26,8 @@
 	],
 	"/(dashboard)/sedes": [
 		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(dashboard)/topology": [
+		"src/routes/(dashboard)/+layout.ts"
 	]
 }
