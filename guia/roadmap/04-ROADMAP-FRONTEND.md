@@ -26,7 +26,7 @@
 | FE.V | Inventario y Dispositivos | [x] (parcial) |
 | FE.VI | Métricas, Gráficos y SSE | [x] |
 | FE.VII | Topología de Red | [x] |
-| FE.VIII | Alertas e Intrusiones | [ ] |
+| FE.VIII | Alertas e Intrusiones | [x] |
 | FE.IX | Gestión de Agentes Distribuidos | [ ] |
 | FE.X | Admin — Usuarios, Roles y Auditoría | [ ] |
 | FE.XI | Local-First y Operación Offline | [ ] |

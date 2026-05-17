@@ -6,6 +6,9 @@
 		"src/routes/(auth)/+layout.ts"
 	],
 	"/": [],
+	"/(dashboard)/alerts": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
 	"/(dashboard)/dashboard": [
 		"src/routes/(dashboard)/+layout.ts"
 	],
@@ -13,6 +16,9 @@
 		"src/routes/(dashboard)/+layout.ts"
 	],
 	"/(dashboard)/devices/[id]": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
+	"/(dashboard)/intrusions": [
 		"src/routes/(dashboard)/+layout.ts"
 	],
 	"/(auth)/login": [
