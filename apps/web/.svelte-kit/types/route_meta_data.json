@@ -18,6 +18,9 @@
 	"/(auth)/login": [
 		"src/routes/(auth)/+layout.ts"
 	],
+	"/(dashboard)/metrics": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
 	"/(auth)/register": [
 		"src/routes/(auth)/+layout.ts"
 	],
