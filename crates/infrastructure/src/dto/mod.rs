@@ -6,4 +6,5 @@
 
 pub mod sede;
 pub mod device;
+pub mod alert;
 pub mod error;

@@ -13,4 +13,5 @@ pub trait AlertRepository: Send + Sync {
     fn acknowledge(&self, id: uuid::Uuid, user_id: uuid::Uuid) -> Result<(), DomainError>;
     fn find_by_device(&self, device_id: uuid::Uuid, limit: usize) -> Result<Vec<Alert>, DomainError>;
     fn find_by_status(&self, status: AlertStatus) -> Result<Vec<Alert>, DomainError>;
+    fn resolve(&self, id: uuid::Uuid) -> Result<(), DomainError>;
 }

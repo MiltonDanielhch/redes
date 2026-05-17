@@ -7,7 +7,7 @@
 use axum::{
     Router,
     extract::State,
-    routing::get,
+    routing::{get, put},
     response::IntoResponse,
 };
 use std::sync::Arc;
@@ -15,12 +15,13 @@ use std::sync::Arc;
 use crate::state::AppState;
 use crate::handlers::sede_handler::{list_sedes, get_sede, create_sede, update_sede};
 use crate::handlers::device_handler::{list_devices, get_device, create_device, update_device, delete_device};
+use crate::handlers::alert_handler::{list_alerts, get_alert, create_alert, acknowledge_alert, resolve_alert, get_alert_stats};
 use crate::openapi::ApiDoc;
 use monitoring::health::HealthRegistry;
 use utoipa::OpenApi;
 
 pub fn create_router() -> Router<Arc<AppState>> {
-    let api_doc = ApiDoc::openapi();
+    let _api_doc = ApiDoc::openapi();
     let health_registry = Arc::new(HealthRegistry::new());
 
     Router::new()
@@ -32,11 +33,17 @@ pub fn create_router() -> Router<Arc<AppState>> {
         .route("/api/v1/sedes/:id", get(get_sede).put(update_sede))
         .route("/api/v1/devices", get(list_devices).post(create_device))
         .route("/api/v1/devices/:id", get(get_device).put(update_device).delete(delete_device))
+        .route("/api/v1/alerts", get(list_alerts).post(create_alert))
+        .route("/api/v1/alerts/stats", get(get_alert_stats))
+        .route("/api/v1/alerts/:id", get(get_alert))
+        .route("/api/v1/alerts/:id/acknowledge", put(acknowledge_alert))
+        .route("/api/v1/alerts/:id/resolve", put(resolve_alert))
         .layer(crate::middleware::cors_layer())
         .layer(crate::middleware::tracing_layer())
         .with_state(Arc::new(AppState::new(
             Arc::new(MockSedeRepository),
             Arc::new(MockDeviceRepository),
+            Arc::new(MockAlertRepository),
             health_registry,
         )))
 }
@@ -126,5 +133,33 @@ impl domain::ports::DeviceRepository for MockDeviceRepository {
 
     fn list(&self) -> Result<Vec<domain::entities::Device>, domain::errors::DomainError> {
         Ok(vec![])
+    }
+}
+
+struct MockAlertRepository;
+
+impl domain::ports::AlertRepository for MockAlertRepository {
+    fn save(&self, _alert: &domain::entities::Alert) -> Result<domain::entities::Alert, domain::errors::DomainError> {
+        Ok(_alert.clone())
+    }
+
+    fn find_active(&self) -> Result<Vec<domain::entities::Alert>, domain::errors::DomainError> {
+        Ok(vec![])
+    }
+
+    fn acknowledge(&self, _id: uuid::Uuid, _user_id: uuid::Uuid) -> Result<(), domain::errors::DomainError> {
+        Ok(())
+    }
+
+    fn find_by_device(&self, _device_id: uuid::Uuid, _limit: usize) -> Result<Vec<domain::entities::Alert>, domain::errors::DomainError> {
+        Ok(vec![])
+    }
+
+    fn find_by_status(&self, _status: domain::entities::AlertStatus) -> Result<Vec<domain::entities::Alert>, domain::errors::DomainError> {
+        Ok(vec![])
+    }
+
+    fn resolve(&self, _id: uuid::Uuid) -> Result<(), domain::errors::DomainError> {
+        Ok(())
     }
 }

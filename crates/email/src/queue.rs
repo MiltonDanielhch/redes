@@ -3,10 +3,10 @@
 //! Descripción: Cola async para envío de emails sin bloquear.
 
 use std::sync::Arc;
-use tokio::sync::{mpsc, oneshot};
+use tokio::sync::mpsc;
 use crate::client::ResendClient;
 use crate::error::EmailError;
-use crate::templates::{alert_notification, password_reset, EmailTemplate};
+use crate::templates::{alert_notification, password_reset};
 
 #[derive(Debug, Clone)]
 pub struct EmailJob {
@@ -29,7 +29,7 @@ pub enum EmailJobTemplate {
 }
 
 pub struct EmailQueue {
-    client: Arc<ResendClient>,
+    _client: Arc<ResendClient>,
     sender: mpsc::Sender<EmailJob>,
 }
 
@@ -47,7 +47,7 @@ impl EmailQueue {
             }
         });
 
-        Self { client, sender }
+        Self { _client: client, sender }
     }
 
     async fn process_job(client: &ResendClient, job: EmailJob) -> Result<(), EmailError> {

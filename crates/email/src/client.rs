@@ -25,6 +25,7 @@ struct SendEmailRequest {
 struct ResendResponse {
     id: String,
     #[serde(default)]
+    #[allow(dead_code)]
     object: Option<String>,
 }
 
@@ -97,10 +98,12 @@ impl ResendClient {
         if let Some(obj) = data.as_object() {
             for (key, value) in obj {
                 let placeholder = format!("{{{{{}}}}}", key);
-                let replacement = value
-                    .as_str()
-                    .unwrap_or(&value.to_string());
-                html = html.replace(&placeholder, replacement);
+                let replacement = if let Some(s) = value.as_str() {
+                    s.to_string()
+                } else {
+                    value.to_string()
+                };
+                html = html.replace(&placeholder, &replacement);
             }
         }
         Ok(html)

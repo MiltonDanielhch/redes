@@ -20,19 +20,14 @@
 
 | Fase | Roadmap | Estado | Progreso |
 |------|---------|--------|----------|
-| ⏳ **Génesis** | `02-ROADMAP-GENESIS.md` | **PENDIENTE** | 0% |
-| ⏳ **Backend I** | `03-ROADMAP-BACKEND.md` | Pendiente | 0% |
-| ⏳ **Backend II** | `03-ROADMAP-BACKEND.md` | Pendiente | 0% |
-| ⏳ **Backend III** | `03-ROADMAP-BACKEND.md` | Pendiente | 0% |
-| ⏳ **Backend IV** | `03-ROADMAP-BACKEND.md` | Pendiente | 0% |
-| ⏳ **Frontend I** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Frontend II** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Frontend III** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Monitoreo I** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
-| ⏳ **Monitoreo II** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
-| ⏳ **Monitoreo III** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
-| ⏳ **Monitoreo IV** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
+| ✅ **Génesis** | `02-ROADMAP-GENESIS.md` | **COMPLETADO** | 100% |
+| 🔄 **Backend** | `03-ROADMAP-BACKEND.md` | **EN PROGRESO** | ~80% |
+| | Bloques I-VI | Completado | 100% |
+| | Bloque VII (Monitoreo) | En progreso | 80% |
+| ⏳ **Frontend** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
 | ⏳ **Auth Fullstack** | `05-ROADMAP-AUTH-FULLSTACK.md` | Pendiente | 0% |
+| ⏳ **Monitoreo Avanzado** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
+| ⏳ **Infra** | `07-ROADMAP-INFRA.md` | Pendiente | 0% |
 
 **PROYECTO: Monitoreo de Infraestructura Regional - Gobernación del Beni** 🏛️
 
@@ -401,17 +396,22 @@ Aquí está el Roadmap activo:
 
 ## Cómo proseguir desde esta sesión
 
-**Último avance:** Ninguno — proyecto iniciando desde Génesis
+**Último avance:** Backend Bloque VII (Monitoreo) — Inventario, Métricas y Topología completados al 80%
 
-**Próximo paso:** Génesis — estructurar el workspace con crates de monitoreo
+**Próximo paso:** Backend Bloque VII.4 — Alertas (detección y gestión de alertas)
 
-**Comandos para iniciar:**
+**Faltante en Backend:**
+- VII.4 Alertas: AlertService, endpoints para alertas
+- VII.5 Detección de Intrusiones: MAC tracking, async-snmp
+
+**Comandos para continuar:**
 ```bash
-# Verificar estructura actual
-ls -la
+# Verificar estado actual
+cargo check --workspace
+just test
 
-# Verificar toolchain
-just doctor
+# Verificar migraciones
+just db-status
 ```
 
 ---

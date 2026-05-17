@@ -6,3 +6,4 @@
 //! ADRs relacionados: 0001 (Hexagonal)
 
 pub mod sede_service;
+pub mod alert_service;

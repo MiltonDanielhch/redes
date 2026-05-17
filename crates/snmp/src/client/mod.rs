@@ -13,10 +13,12 @@ impl SnmpClient {
         Self
     }
 
+    #[allow(unused_variables)]
     pub async fn poll(&self, ip: IpAddr, oid: &str) -> Result<String, Box<dyn std::error::Error>> {
         Ok(String::new())
     }
 
+    #[allow(unused_variables)]
     pub async fn get_system_description(&self, ip: IpAddr) -> Result<String, Box<dyn std::error::Error>> {
         Ok(String::new())
     }

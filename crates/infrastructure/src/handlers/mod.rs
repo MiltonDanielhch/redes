@@ -6,3 +6,4 @@
 
 pub mod device_handler;
 pub mod sede_handler;
+pub mod alert_handler;

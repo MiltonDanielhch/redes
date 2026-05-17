@@ -17,6 +17,7 @@ impl SyncEngine {
         Ok(())
     }
 
+    #[allow(unused_variables)]
     pub async fn push(&self, item: SyncQueueItem) -> Result<(), Box<dyn std::error::Error>> {
         Ok(())
     }

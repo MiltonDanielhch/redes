@@ -1,15 +1,14 @@
-# ADR 0015 — Jobs Asíncronos con Apalis 1.0
+# ADR 0015 — Jobs Asíncronos con Tokio JoinSet
 
-> **Última revisión de versiones:** 2026-05-16  
-> Se actualizaron las versiones de dependencias tras auditoría contra crates.io, GitHub, docs.rs y repositorios oficiales.
+> **Última revisión:** 2026-05-17
+> **Estado:** ✅ Actualizado - Reemplazado Apalis por Tokio JoinSet
 
 | Campo               | Valor                                                                 |
 | ------------------- | --------------------------------------------------------------------- |
-| **Estado**          | ✅ Aceptado                                                           |
-| **Fecha**           | 2026-05-16                                                             |
+| **Estado**          | ✅ Actualizado (antes: Aceptado)                                      |
+| **Fecha**           | 2026-05-17 (original: 2026-05-16)                                     |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                     |
 | **Relacionado con** | ADR 0014 (Monitoreo), ADR 0003 (Stack Backend), ADR 0020 (Monitoreo Regional), ADR 0021 (Local-First Sync) |
-| **Última revisión** | 2026-05-16 — Actualización a Apalis 1.0-rc.7 + tokio 1.52 + tower 0.5.3 |
 
 ---
 
@@ -26,33 +25,44 @@ El handler HTTP no debe bloquearse esperando estos procesos.
 
 ---
 
-## Decisión
+## Decisión Original (2026-05-16)
 
-Usar **Apalis 1.0** (release candidate) como layer de jobs asíncronos en Rust.
+~~Usar **Apalis 1.0** (release candidate) como layer de jobs asíncronos en Rust.~~
 
-**Versión:** `1.0.0-rc.7` (última release candidate, abril 2026)
+## Decisión Actual (2026-05-17)
 
-**Storage:** `apalis-postgres` para producción, `apalis-sqlite` para desarrollo.
+**Usar Tokio JoinSet + mpsc channel + Semaphore** como alternativa zero-dependency a Apalis.
 
-> **Nota:** Apalis 1.0 aún no ha alcanzado versión estable. La última RC es `1.0.0-rc.7` (abril 2026). Se recomienda fijar versión exacta y revisar changelog antes de actualizar. `apalis-board` está en `1.0.0-rc.8`.
+**Razón del cambio:** Apalis 1.0 RC no tiene features postgres disponibles en la versión rc.9, bloqueando la implementación.
+
+**Ventajas de Tokio JoinSet:**
+- Zero-dependency extra (solo usa tokio)
+- Zero-cost abstraction
+- Back-pressure nativo con Semaphore
+- Integración directa con Tokio runtime
+- Simplicidad - sin capas de abstracción innecesarias
+
+**Limitaciones:**
+- Solo para jobs locales (no distribuido)
+- No tiene retry built-in (se puede agregar manualmente)
+- No tiene scheduling built-in (se puede usar tokio::time)
+
+> **Nota:** Para sistemas que requieran jobs distribuidos entre múltiples nodos, considerar pgmq o rediq (cola Postgres).
 
 ---
 
-## Dependencias
+## Implementación
+
+**Dependencias en `crates/jobs/Cargo.toml`:**
 
 ```toml
-# crates/jobs/Cargo.toml
-
 [dependencies]
-apalis = { version = "1.0.0-rc.7", features = ["tracing"] }
-apalis-postgres = "1.0.0-rc.7"
-apalis-sqlite = { version = "1.0.0-rc.7", optional = true }
-apalis-cron = "1.0.0-rc.7"
-tokio = { version = "1.52", features = ["rt-multi-thread", "macros"] }
-tracing = "0.1"
-tower = { version = "0.5.3", features = ["retry", "timeout", "limit"] }
-serde = { version = "1.0", features = ["derive"] }
-chrono = "0.4"
+domain = { path = "../domain" }
+uuid = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+thiserror = { workspace = true }
 ```
 
 ---
@@ -62,17 +72,13 @@ chrono = "0.4"
 ```text
 Request HTTP
      ↓
-Use Case (sync)
+Enqueue Job → JobQueue (mpsc channel + in-memory)
      ↓
-Enqueue Job → PostgreSQL (apalis_postgres::PostgresStorage)
+Worker Loop (tokio::spawn + JoinSet)
      ↓
-Worker (async) — Monitor + WorkerBuilder
+Semaphore (back-pressure, max_concurrent)
      ↓
-Tower Middleware (retry, timeout, rate limit, tracing)
-     ↓
-Procesamiento
-     ↓
-Healthchecks.io ping (ADR 0014)
+Procesamiento async
 ```
 
 ---

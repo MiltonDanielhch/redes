@@ -13,7 +13,6 @@ use std::sync::Arc;
 use crate::dto::{device::{CreateDeviceRequest, UpdateDeviceRequest, DeviceResponse}, error::ApiErrorResponse};
 use crate::state::AppState;
 use domain::entities::{Device, DeviceType, DeviceStatus};
-use domain::ports::DeviceRepository;
 
 #[utoipa::path(
     get,

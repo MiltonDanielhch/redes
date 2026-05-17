@@ -37,21 +37,22 @@
 | | | [x] DTOs con ToSchema |
 | | | [x] Handlers con #[utoipa::path] |
 | | | [x] OpenApi derive |
-| V | Async — Jobs + Cache + Email | [x] 75% |
+| V | Async — Jobs + Cache + Email | [x] 100% |
+| | | [x] V.1 Jobs (Tokio JoinSet) |
 | | | [x] V.2 Cache Moka |
 | | | [x] V.3 Healthchecks |
 | | | [x] V.4 Email Resend |
-| | | [~] V.1 Jobs (bloqueado Apalis) |
 | VI | Observabilidad | [x] 100% |
 | | | [x] VI.1 Tracing + OpenTelemetry |
 | | | [x] VI.2 Metrics Prometheus |
 | | | [x] VI.3 Logging estructurado |
-| VII | Monitoreo — Inventario + Métricas + Topología | [x] 80% |
+| VII | Monitoreo — Inventario + Métricas + Topología | [x] 90% |
 | | | [x] VII.1 Inventario (estructura) |
 | | | [x] VII.2 Métricas (estructura) |
 | | | [x] VII.3 Topología (estructura) |
-| | | [~] VII.4 Alertas (pendiente) |
-| **Backend Core** | | [x] **~80%** |
+| | | [x] VII.4 Alertas (handlers completados) |
+| | | [ ] VII.5 Detección de Intrusiones (pendiente) |
+| **Backend Core** | | [x] **~90%** |
 
 ---
 
@@ -300,19 +301,21 @@
 
 ## Bloque V — Async (Jobs + Cache + Email) 🔥
 
-> **En progreso:** V.1 Jobs bloqueado (Apalis), V.2-V.4 completados
-> **ADR 0015, 0014, 0011**
+> **Completado:** 2026-05-17
+> **ADR 0015 (Tokio JoinSet), 0014, 0011**
 
-### V.1 — Background Jobs ⚠️
+### V.1 — Background Jobs ✅
 
-> **Referencia:** ADR 0015
+> **Completado:** 2026-05-17
+> **Referencia:** ADR 0015 (reemplazado Apalis por Tokio JoinSet)
 
 ```
-[ ] crates/jobs/
-    ⚠️ Apalis 1.0.0-rc.9 sin features postgres disponibles
-    [ ] MetricCollectionJob: recolecta métricas cada 60s
-    [ ] AlertDetectionJob: detecta anomalías
-    [ ] TopologyUpdateJob: actualiza grafo de red
+[x] crates/jobs/
+    [x] JobQueue con Tokio JoinSet + mpsc channel
+    [x] Back-pressure con Semaphore (max_concurrent configurable)
+    [x] EmailJob, MetricsAggregationJob, AlertDispatchJob, CleanupMetricsJob
+    [x] JobBuilder para ergonomía
+    [x] Tests unitarios
 ```
 
 ### V.2 — Cache (Moka) ✅
@@ -414,20 +417,24 @@
 [x] crates/topology/src/analyzer/mod.rs (esqueleto)
 ```
 
-### VII.4 — Alertas ⚠️
+### VII.4 — Alertas ✅
 
+> **Completado:** 2026-05-17
 > **Referencia:** ADR 0020
 
 ```
-[ ] AlertService: detecta y crea alertas
-[ ] Tipos: DeviceOffline, BandwidthSaturation, PacketLoss, Intrusion
-[ ] Severidades: Critical, High, Medium, Low
-[ ] Estados: Active, Acknowledged, Resolved
+[x] AlertService: detecta y crea alertas
+[x] Tipos: DeviceOffline, BandwidthSaturation, PacketLoss, Intrusion
+[x] Severidades: Critical, High, Medium, Low
+[x] Estados: Active, Acknowledged, Resolved
 
-[ ] Endpoints
-    [ ] GET /api/v1/alerts (con filtros)
-    [ ] PUT /api/v1/alerts/:id/acknowledge
-    [ ] PUT /api/v1/alerts/:id/resolve
+[x] Endpoints
+    [x] GET /api/v1/alerts (con filtros)
+    [x] PUT /api/v1/alerts/:id/acknowledge
+    [x] PUT /api/v1/alerts/:id/resolve
+    [x] GET /api/v1/alerts/:id
+    [x] POST /api/v1/alerts
+    [x] GET /api/v1/alerts/stats
 ```
 
 ### VII.5 — Detección de Intrusiones ⚠️
@@ -493,6 +500,7 @@
 | `2a13c1a` | feat(backend): B.3 rutas API + AppState + mock repositories |
 | `517a36b` | feat(backend): middleware tracing con tower-http TraceLayer |
 | `f8c696f` | docs: roadmap backend - Bloque I y II completados (40%) |
+| `fix(compilation): corrección de errores y warnings en workspace | observability, email, infrastructure, storage, topology, sync, snmp, database |
 
 ---
 

@@ -11,6 +11,7 @@ use domain::errors::DomainError;
 use uuid::Uuid;
 
 pub struct PostgresSedeRepository {
+    #[allow(dead_code)]
     pool: sqlx::PgPool,
 }
 
@@ -25,10 +26,12 @@ impl SedeRepository for PostgresSedeRepository {
         todo!("Implementar con sqlx - SELECT * FROM sedes WHERE deleted_at IS NULL")
     }
 
+    #[allow(unused_variables)]
     fn find_by_id(&self, id: Uuid) -> Result<Option<Sede>, DomainError> {
         todo!("Implementar con sqlx - SELECT * FROM sedes WHERE id = $1 AND deleted_at IS NULL")
     }
 
+    #[allow(unused_variables)]
     fn save(&self, sede: &Sede) -> Result<Sede, DomainError> {
         todo!("Implementar con sqlx - INSERT INTO sedes")
     }

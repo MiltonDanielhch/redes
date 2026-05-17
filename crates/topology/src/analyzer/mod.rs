@@ -13,11 +13,11 @@ impl TopologyAnalyzer {
         Self
     }
 
-    pub fn analyze_path(&self, from: Uuid, to: Uuid) -> Vec<Uuid> {
+    pub fn analyze_path(&self, _from: Uuid, _to: Uuid) -> Vec<Uuid> {
         vec![]
     }
 
-    pub fn find_shortest_path(&self, from: Uuid, to: Uuid) -> Option<Vec<Uuid>> {
+    pub fn find_shortest_path(&self, _from: Uuid, _to: Uuid) -> Option<Vec<Uuid>> {
         None
     }
 }
