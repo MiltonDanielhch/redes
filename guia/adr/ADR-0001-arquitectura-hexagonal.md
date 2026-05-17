@@ -79,7 +79,7 @@ El dominio solo conoce reglas de negocio.
 redes/
 ├── apps/
 │   ├── api/           # Backend Axum (ADR 0003)
-│   ├── web/           # Dashboard SvelteKit 5 (ADR 0017)
+│   ├── web/           # Dashboard SvelteKit 2 + Svelte 5 (ADR 0017)
 │   └── agent/         # Agente de monitoreo en sedes remotas (ADR 0022)
 │
 ├── crates/
@@ -160,7 +160,7 @@ redes/
 | `database` | SQLx, repositorios, migraciones | `domain`, `sqlx`, `moka` |
 | `auth` | PASETO v4, argon2id, password hashing | `domain`, `pasetors`, `argon2`, `secrecy` |
 | `inventory` | Lógica de inventario de dispositivos | `domain` |
-| `jobs` | Apalis — background jobs (alertas, agregación, cleanup) | `domain`, `apalis`, `async-trait` |
+| `jobs` | Apalis — background jobs (alertas, agregación, cleanup) | `domain`, `apalis` |
 | `sync` | Sincronización offline, sync queue | `domain`, `tokio`, `serde` |
 | `snmp` | Recolección SNMP, ICMP ping, descubrimiento | `domain`, `snmp`, `surge-ping`, `tokio` |
 | `topology` | Grafo de red, análisis de conectividad, SPOF | `domain` |
@@ -174,7 +174,7 @@ redes/
 | App | Responsabilidad | Dependencias |
 |-----|----------------|-------------|
 | `api` | Servidor Axum — ensambla todos los crates | `infrastructure`, `database`, `auth`, `storage`, `domain`, `application` |
-| `web` | Dashboard SvelteKit SSR | Frontend (no depende de crates Rust) |
+| `web` | Dashboard SvelteKit 2 SSR con Svelte 5 | Frontend (no depende de crates Rust) |
 | `agent` | Agente de monitoreo en sedes remotas | `domain` (tipos compartidos), `snmp`, `sync`, `tokio`, `reqwest`, `rusqlite` |
 
 ---
@@ -215,7 +215,6 @@ pub struct PostgresDeviceRepository {
     pool: PgPool,
 }
 
-#[async_trait]
 impl DeviceRepository for PostgresDeviceRepository {
     async fn find_by_id(&self, id: &DeviceId) -> Result<Option<Device>, DomainError> {
         sqlx::query_as::<_, DeviceRow>(
@@ -310,7 +309,7 @@ Si mañana PostgreSQL cambia, solo se reemplaza el adaptador. El dominio permane
 ## Alternativas descartadas
 
 | Opción | Motivo |
-|--------|---------|
+|--------|--------|
 | Microservicios | Complejidad operacional excesiva para equipo pequeño |
 | Monolito sin capas | Difícil mantenimiento, acoplamiento total |
 | Kubernetes temprano | Innecesario para el tamaño actual (Coolify es suficiente) |
@@ -366,3 +365,13 @@ Una base sólida para un sistema de monitoreo regional:
 - barata de desplegar,
 - fácil de evolucionar,
 - resistente a cambios tecnológicos.
+
+---
+
+## Notas de actualización (2026-05-16)
+
+- **Frontend:** Corregida la referencia a "SvelteKit 5" → `SvelteKit 2` con `Svelte 5`. SvelteKit 2.x es el framework full-stack actual; Svelte 5 es la versión del compilador de componentes.
+- **Rust 2024 + Axum 0.8:** Con la edición 2024 y Axum 0.8, los traits async nativos de Rust reemplazan la necesidad de `async-trait` en extractores y handlers. Se mantiene `async-trait` solo donde sea estrictamente necesario por compatibilidad con crates que aún lo requieran.
+- **SQLx:** Actualizado a la serie 0.8.x estable.
+- **Utoipa:** Serie 5.x con soporte OpenAPI 3.1.
+- **PASETO v4:** `pasetors` / `paseto-rs` implementan PASETO v4 con XChaCha20-Poly1305 + Ed25519.

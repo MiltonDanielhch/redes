@@ -1,5 +1,8 @@
 # Roadmap — Génesis (Arranque del Proyecto)
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de herramientas y toolchain tras auditoría contra rust-lang.org, crates.io, nodejs.org y docs.rs.
+>
 > **Objetivo:** directorio vacío → monorepo funcional con crates declarados,
 > herramientas instaladas y `cargo check --workspace` pasando limpio.
 >
@@ -51,14 +54,14 @@ Debe operar con **Local-First** tolerando:
 ```
 mise.toml en la raíz (toolchain management)
     └─ Ref: ADR 0012, https://mise.jdx.dev
-    [ ] rust = "1.86"  ← Última estable verificada (Edition 2024 soportada desde 1.85+)
-    [ ] node = "24"
-    [ ] pnpm = "10"
-    [ ] just = "1.40"
+    [ ] rust = "1.95"  ← Última estable verificada (Edition 2024 soportada desde 1.85+)
+    [ ] node = "24"    ← LTS estable para producción (Node 26 es Current)
+    [ ] pnpm = "10"    ← Última estable: 10.27.0
+    [ ] just = "1.51"  ← Última estable: 1.51.0 (may 2026)
 
 rust-toolchain.toml en la raíz
     └─ Ref: https://rust-lang.github.io/rustup/overrides.html
-    [ ] channel = "1.86.0"
+    [ ] channel = "1.95.0"  ← Última stable (abr 2026)
     [ ] components = ["rustfmt", "clippy", "rust-analyzer"]
     [ ] targets = ["x86_64-unknown-linux-musl"]
     [ ] profile = "minimal"
@@ -178,13 +181,13 @@ crates/database/Cargo.toml
     └─ Ref: ADR 0004, ADR 0020 (métricas)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] sqlx, moka
+    [ ] sqlx 0.8.6, moka 0.12.15
 
 crates/auth/Cargo.toml
     └─ Ref: ADR 0008 (PASETO - JWT prohibido)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] argon2, pasetors, secrecy
+    [ ] argon2 0.5.3, pasetors 0.7.8, secrecy 0.10.3
     [ ] VERIFICAR: grep -r "jsonwebtoken" . --include="*.toml" → cero resultados
 
 crates/inventory/Cargo.toml
@@ -202,25 +205,25 @@ crates/monitoring/Cargo.toml
     └─ Ref: ADR 0014 (Healthchecks), ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] reqwest, tracing
+    [ ] reqwest 0.13, tracing
 
 crates/jobs/Cargo.toml
     └─ Ref: ADR 0015 (Apalis), ADR 0020
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] apalis, async-trait
+    [ ] apalis 1.0.0-rc.7, async-trait
 
 crates/sync/Cargo.toml
     └─ Ref: ADR 0021 (Local-First Sync Offline)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] tokio, serde
+    [ ] tokio 1.52, serde
 
 crates/snmp/Cargo.toml
     └─ Ref: ADR 0020 (Monitoreo red)
     [ ] edition = "2024"
     [ ] domain = { path = "../domain" }
-    [ ] snmp, tokio
+    [ ] snmp, tokio 1.52
 
 crates/topology/Cargo.toml
     └─ Ref: ADR 0020 (Topología)
@@ -232,7 +235,7 @@ crates/infrastructure/Cargo.toml
     [ ] edition = "2024"
     [ ] application, database, auth, storage
     [ ] inventory, monitoring, jobs, sync, snmp, topology
-    [ ] axum, utoipa, tower, tower-http
+    [ ] axum 0.8, utoipa 5.4, tower 0.5.3, tower-http 0.6.10
 
 apps/api/Cargo.toml
     └─ Ref: ADR 0003, ADR 0020
@@ -243,7 +246,7 @@ apps/api/Cargo.toml
 apps/agent/Cargo.toml
     └─ Ref: ADR 0022 (Agente de monitoreo distribuido)
     [ ] edition = "2024"
-    [ ] snmp, sync, monitoring, tokio, reqwest
+    [ ] snmp, sync, monitoring, tokio 1.52, reqwest 0.13
 
 apps/cli/Cargo.toml
     🟡 Fase 2 — Definir en roadmap futuro (CLI/Sintonía)
@@ -430,22 +433,24 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 
 ---
 
-## Stack Tecnológico (basado en ADRs)
+## Stack Tecnológico (basado en ADRs actualizados)
 
 | Componente | Tecnología | ADR |
 |------------|------------|-----|
-| Backend | Rust + Axum | ADR 0003 |
-| Frontend | SvelteKit + Svelte 5 | ADR 0017 |
-| DB | PostgreSQL + SQLite (Local-First) | ADR 0004, ADR 0021 |
+| Backend | Rust 1.95 + Axum 0.8 | ADR 0003 |
+| Frontend | SvelteKit 2.57 + Svelte 5.55 | ADR 0017 |
+| DB | PostgreSQL 17.10 + SQLite (Local-First) | ADR 0004, ADR 0021 |
 | Deploy | Coolify | ADR 0019 |
-| Jobs | Apalis | ADR 0015 |
+| Jobs | Apalis 1.0.0-rc.7 | ADR 0015 |
 | Mail | Resend | ADR 0016 |
 | Monitoreo tareas | Healthchecks.io | ADR 0014 |
 | Realtime | SSE | ADR 0017 |
-| API Docs | OpenAPI + Utoipa | ADR 0016 |
+| API Docs | OpenAPI + Utoipa 5.4 | ADR 0016 |
 | Auth | PASETO v4 + argon2id | ADR 0008 |
 | Agentes distribuidos | Rust ligero + SNMP | ADR 0022 |
 | Sync offline | SQLite Wasm + sync queue | ADR 0021 |
+| Toolchain | mise 2026.5, just 1.51.0, pnpm 10.27 | ADR 0012 |
+| Testing | cargo-nextest 0.9.135, Vitest 4.1, Playwright 1.59 | ADR 0010, ADR 0017 |
 
 ---
 
@@ -455,8 +460,8 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 |-----|------|
 | ADR 0001 | Arquitectura Hexagonal |
 | ADR 0002 | Configuración Tipeada |
-| ADR 0003 | Stack Backend (Rust + Axum) |
-| ADR 0004 | Persistencia PostgreSQL |
+| ADR 0003 | Stack Backend (Rust 1.95 + Axum 0.8) |
+| ADR 0004 | Persistencia PostgreSQL 17.10 |
 | ADR 0005 | Migraciones y Seeding |
 | ADR 0006 | RBAC, Sessions, Audit |
 | ADR 0007 | Manejo de Errores |
@@ -469,7 +474,7 @@ Dashboard SvelteKit realtime (apps/web) ← Ref: ADR 0017
 | ADR 0014 | Monitoreo Tareas Críticas (Healthchecks) |
 | ADR 0015 | Jobs Asíncronos Apalis |
 | ADR 0016 | Documentación OpenAPI + Mailer Resend |
-| ADR 0017 | Frontend SvelteKit + Svelte 5 |
+| ADR 0017 | Frontend SvelteKit 2.57 + Svelte 5.55 |
 | ADR 0018 | Sintonía CLI |
 | ADR 0019 | Coolify Deploy |
 | ADR 0020 | Monitoreo de Infraestructura Regional |
@@ -502,9 +507,38 @@ just --list               # muestra todos los comandos
 | `duplicate workspace member` | Crate listado 2 veces | Buscar duplicado en `[workspace.members]` |
 | `just: command not found` | just no instalado | `mise install` o `cargo install just` |
 | `.env.local` no existe | No copiado desde ejemplo | `cp .env.example .env.local` |
-| `rustup: target not found 1.95.0` | Versión inexistente | Actualizar a `1.86.0` en rust-toolchain.toml |
+| `rustup: target not found 1.95.0` | Versión inexistente | Actualizar rustup: `rustup self update` |
 | `crate inventory not found` | Carpeta no creada | Crear `crates/inventory/` y `cargo init --lib` |
 | `sqlx-cli: no postgres feature` | Instalado sin feature correcta | Reinstalar: `cargo install sqlx-cli --features postgres,sqlite` |
+| `pasetors compile error` | MSRV insuficiente | Verificar `rustc --version` ≥ 1.88 (pasetors 0.7.8 requiere 1.88+) |
+| `reqwest 0.13` no compila | Feature TLS incorrecta | Usar `rustls` (no `rustls-tls`) en reqwest 0.13 |
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | Rust toolchain | 1.86.0 | **1.95.0** | Última stable (abr 2026). Edition 2024 soportada. |
+| 2026-05-16 | mise | 2026.x | **2026.5** | v2026.5.9 (15 may 2026) |
+| 2026-05-16 | just | 1.40 | **1.51.0** | Última estable (may 2026) |
+| 2026-05-16 | pnpm | 10 | **10.27** | Última estable (dic 2025) |
+| 2026-05-16 | Node.js | 24 | **24** (LTS) | Node 24 LTS estable. Node 26 Current para dev. |
+| 2026-05-16 | sqlx | 0.8.5 | **0.8.6** | Patch release |
+| 2026-05-16 | moka | 0.12 | **0.12.15** | Patch release |
+| 2026-05-16 | argon2 | 0.5 | **0.5.3** | Última estable |
+| 2026-05-16 | pasetors | 0.7 | **0.7.8** | Última estable (feb 2026). MSRV 1.88. |
+| 2026-05-16 | secrecy | 0.10 | **0.10.3** | Última estable |
+| 2026-05-16 | reqwest | 0.12 | **0.13** | Breaking change: `rustls-tls` → `rustls` |
+| 2026-05-16 | tokio | 1.45 | **1.52** | Runtime actualizado |
+| 2026-05-16 | tower | 0.5.2 | **0.5.3** | Última estable |
+| 2026-05-16 | tower-http | 0.6.2 | **0.6.10** | Patches de seguridad |
+| 2026-05-16 | utoipa | 5 | **5.4** | Nuevas features |
+| 2026-05-16 | apalis | 1.0.0-rc.9 | **1.0.0-rc.7** | rc.9 no existe. Última real: rc.7 |
+| 2026-05-16 | Svelte | 5.45 | **5.55.0** | Última estable |
+| 2026-05-16 | SvelteKit | 2.x | **2.57.0** | Última estable |
+| 2026-05-16 | Vitest | 3.x | **4.1** | Última estable |
+| 2026-05-16 | Playwright | 1.x | **1.59** | Última estable |
 
 ---
 

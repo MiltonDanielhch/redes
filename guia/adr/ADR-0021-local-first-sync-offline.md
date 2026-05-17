@@ -5,7 +5,7 @@
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026-05-16 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Versión** | 2.0 (Corrección 2026) |
+| **Versión** | 2.1 (Corrección 2026-05-16) |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0020 (Monitoreo Regional), ADR 0017 (SvelteKit Frontend), ADR 0008 (PASETO), ADR 0015 (Jobs), ADR 0022 (Agentes Distribuidos) |
 
 ---
@@ -31,6 +31,17 @@ Implementar una arquitectura **Local-First** donde:
 2. Las operaciones de escritura se **encolan localmente** cuando no hay conectividad
 3. Al reconectar, se **sincronizan** los cambios pendientes con el servidor
 4. El agente de sede (ADR 0022) mantiene su propia **SQLite local** para buffering de métricas
+
+---
+
+## Tecnologías SQLite Wasm
+
+| Opción | Versión | Propósito | Notas |
+|--------|---------|-----------|-------|
+| `@sqlite.org/sqlite-wasm` | `3.53.0-build1` | **Opción principal** — SQLite oficial en Wasm con OPFS | ES Module, soporte Worker, requiere headers COOP/COEP |
+| `sql.js` | `1.14.1` | Alternativa simple — pure JS (Emscripten) | Sin OPFS, más maduro, menor bundle |
+
+**Recomendación:** Usar `@sqlite.org/sqlite-wasm` 3.53.0-build1 como opción principal para nuevas implementaciones. Soporta Origin Private File System (OPFS) para persistencia real en el filesystem del browser, SharedArrayBuffer para concurrencia entre tabs, y la API oficial de SQLite. `sql.js` 1.14.1 es válido como fallback si OPFS no está disponible o se requiere compatibilidad máxima.
 
 ---
 
@@ -61,7 +72,7 @@ Implementar una arquitectura **Local-First** donde:
 ```text
 ┌─────────────────────────────────────────────────────────────────┐
 │  Frontend (SvelteKit)                                          │
-│  ├─ SQLite Wasm (sql.js / wa-sqlite)                          │
+│  ├─ SQLite Wasm (@sqlite.org/sqlite-wasm 3.53.0-build1)       │
 │  │   ├─ devices_cache                                          │
 │  │   ├─ sedes_cache                                            │
 │  │   ├─ alerts_cache                                           │
@@ -96,7 +107,7 @@ Implementar una arquitectura **Local-First** donde:
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-**Nota (2026):** El Sync Engine vive en `apps/web/src/lib/sync/` (TypeScript/Svelte), no en `crates/sync/`. El crate `crates/sync/` (Rust) es para el **agente de sede** (ADR 0022), no para el frontend. El frontend usa `sql.js` o `wa-sqlite` vía WebAssembly, no un crate Rust compilado a Wasm.
+**Nota (2026):** El Sync Engine vive en `apps/web/src/lib/sync/` (TypeScript/Svelte), no en `crates/sync/`. El crate `crates/sync/` (Rust) es para el **agente de sede** (ADR 0022), no para el frontend. El frontend usa `@sqlite.org/sqlite-wasm` vía WebAssembly, no un crate Rust compilado a Wasm.
 
 ---
 
@@ -106,8 +117,8 @@ Implementar una arquitectura **Local-First** donde:
 
 ```typescript
 interface SyncOperation {
-  id: string;           // UUID v7 local
-  type: 'create' | 'update' | 'delete' | 'acknowledge' | 'resolve';
+  id: string;           // UUID v7 local (uuid@14.0.0)
+  type: 'create' | 'update' | 'acknowledge' | 'resolve';
   entity: 'device' | 'sede' | 'alert' | 'intrusion';
   entity_id: string;
   payload: Record<string, unknown>;
@@ -118,7 +129,7 @@ interface SyncOperation {
 }
 ```
 
-**Nota:** Los tipos `acknowledge` y `resolve` son operaciones de monitoreo (alertas e intrusiones) que deben funcionar offline. Se elimina `'delete'` como tipo de operación offline — el proyecto usa **Soft Delete** (ADR 0006), por lo que las operaciones de eliminación se traducen a `update` con `deleted_at`.
+**Nota:** Los tipos `acknowledge` y `resolve` son operaciones de monitoreo (alertas e intrusiones) que deben funcionar offline. Se elimina `'delete'` como tipo de operación offline — el proyecto usa **Soft Delete** (ADR 0006), por lo que las operaciones de eliminación se traducen a `update` con `deleted_at`. Los IDs usan **UUID v7** (uuid@14.0.0) para ordenación temporal natural y trazabilidad.
 
 ### Proceso de Sync
 
@@ -305,7 +316,7 @@ Jobs Apalis procesan agregaciones
 
 **Nota:** El agente (Rust) y el frontend (TypeScript) comparten la **misma estrategia de sync** pero implementaciones distintas:
 - **Agente**: `crates/sync/` (Rust) + SQLite local + HTTP client reqwest
-- **Frontend**: `apps/web/src/lib/sync/` (TypeScript) + sql.js/wa-sqlite + fetch
+- **Frontend**: `apps/web/src/lib/sync/` (TypeScript) + `@sqlite.org/sqlite-wasm` + fetch
 
 ---
 
@@ -315,7 +326,7 @@ Jobs Apalis procesan agregaciones
 // apps/web/src/lib/sync/sync-engine.ts
 
 class SyncEngine {
-  private db: Database; // sql.js / wa-sqlite
+  private db: Database; // @sqlite.org/sqlite-wasm
   private isOnline = $state(navigator.onLine);
   private syncStatus = $state<'idle' | 'syncing' | 'error'>('idle');
 
@@ -490,6 +501,46 @@ self.addEventListener('fetch', (event) => {
 
 ---
 
+## Configuración Vite (OPFS + COOP/COEP)
+
+Para usar `@sqlite.org/sqlite-wasm` con OPFS y SharedArrayBuffer:
+
+```typescript
+// vite.config.ts
+import { defineConfig } from 'vite';
+
+export default defineConfig({
+  server: {
+    headers: {
+      'Cross-Origin-Opener-Policy': 'same-origin',
+      'Cross-Origin-Embedder-Policy': 'require-corp',
+    },
+  },
+  optimizeDeps: {
+    exclude: ['@sqlite.org/sqlite-wasm'],
+  },
+});
+```
+
+**Nota:** OPFS y SharedArrayBuffer requieren headers COOP/COEP. Esto es obligatorio para la concurrencia entre tabs y el rendimiento de SQLite Wasm oficial. Si el despliegue no puede configurar estos headers, usar `sql.js` 1.14.1 como fallback (sin OPFS, persistencia en IndexedDB o memory).
+
+---
+
+## Dependencias npm
+
+```bash
+# Opción principal: SQLite oficial con OPFS
+pnpm add @sqlite.org/sqlite-wasm@3.53.0-build1
+
+# Alternativa: sql.js simple (fallback)
+pnpm add sql.js@1.14.1
+
+# UUID v7 para IDs de sync (monotónicos, sortables)
+pnpm add uuid@14.0.0
+```
+
+---
+
 ## Consecuencias
 
 ### ✅ Positivas
@@ -501,22 +552,25 @@ self.addEventListener('fetch', (event) => {
 * UX consistente online/offline
 * El agente de sede puede operar autónomamente y sincronizar métricas diferidas
 * Datos críticos siempre disponibles en sedes remotas
+* UUID v7 garantiza ordenación temporal de operaciones sin dependencias externas
 
 ### ⚠️ Trade-offs
 
 * Complejidad adicional en frontend (SQLite Wasm + sync engine)
-* Tamaño del bundle aumenta (~500KB por sql.js/wa-sqlite)
+* Tamaño del bundle aumenta (~500KB por `@sqlite.org/sqlite-wasm`, ~300KB por `sql.js`)
 * Conflictos de sync requieren atención del usuario (UI de resolución)
 * Datos locales pueden quedar desactualizados hasta el próximo sync
 * Necesita estrategia de purge de cache (retención 30 días recomendada)
 * Grace period de 24h para tokens introduce riesgo de seguridad menor (mitigado: solo lectura + sync queue, no admin)
+* OPFS requiere headers COOP/COEP — puede no ser compatible con todos los hosting/CDN
 
 ---
 
 ## Decisiones derivadas
 
-* SQLite Wasm (`sql.js` o `wa-sqlite`) es la tecnología elegida para Local-First en frontend
-* La sync queue usa **UUID v7** para ordenación temporal y trazabilidad
+* `@sqlite.org/sqlite-wasm` 3.53.0-build1 es la tecnología elegida para Local-First en frontend (OPFS, ES Module, oficial)
+* `sql.js` 1.14.1 es **fallback oficial** si OPFS no está disponible o headers COOP/COEP no pueden configurarse
+* La sync queue usa **UUID v7** (uuid@14.0.0) para ordenación temporal y trazabilidad
 * La resolución de conflictos es **configurable por entidad** (LWW por defecto, remote_wins para alertas/intrusiones, append_only para métricas)
 * Los tokens tienen **grace period de 24h** para operaciones offline (solo lectura + sync queue)
 * El agente comparte la **misma estrategia de sync** que el frontend pero con implementación Rust (`crates/sync/`)
@@ -529,6 +583,7 @@ self.addEventListener('fetch', (event) => {
 * Los datos cacheados tienen **TTL de 30 días** — purge automático en reconexión
 * `navigator.onLine` no es suficiente — se verifica con **ping real a `/health`** cada 30s
 * El sync engine vive en `apps/web/src/lib/sync/` (TypeScript), no en `crates/sync/` (Rust)
+* Vite debe configurar headers COOP/COEP para OPFS/SharedArrayBuffer
 
 ---
 
@@ -538,3 +593,4 @@ self.addEventListener('fetch', (event) => {
 | ------- | ----------- | ------------------ |
 | 1.0     | 2026 (orig) | Versión inicial con ambigüedad sobre ubicación del sync engine (`crates/sync/` vs frontend), sin tablas `sedes_cache`/`alerts_cache`, sin restricciones CHECK en sync_queue, sin mención de Soft Delete en operaciones offline, sin límite de batch, sin estrategia de purge |
 | 2.0     | 2026-05-16  | Clarifica que `crates/sync/` es para agente Rust y `apps/web/src/lib/sync/` para frontend; agrega tablas `sedes_cache` y `alerts_cache`; restringe `op_type` con CHECK (elimina 'delete', usa 'update' para Soft Delete); agrega límite de 50 ops/batch, retry backoff, TTL 30 días, ping real a /health; agrega implementación TypeScript del SyncEngine; agrega Service Worker con estrategia network-first/cache-first; documenta grace period de seguridad |
+| 2.1     | 2026-05-16  | Especifica tecnología SQLite Wasm: `@sqlite.org/sqlite-wasm` 3.53.0-build1 (opción principal) y `sql.js` 1.14.1 (fallback); agrega `uuid` 14.0.0 para UUID v7; agrega configuración Vite para COOP/COEP; actualiza dependencias npm con versiones exactas; documenta requisitos de OPFS y SharedArrayBuffer |

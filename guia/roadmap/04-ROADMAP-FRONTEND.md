@@ -45,17 +45,17 @@
         [ ] template: Skeleton project
         [ ] TypeScript: Yes
         [ ] Add ESLint, Prettier, Playwright: Yes
-    [ ] adapter: @sveltejs/adapter-node (mode: standalone) ← SSR para SEO/seguridad
+    [ ] adapter: @sveltejs/adapter-node@5.5.4 (mode: standalone) ← SSR para SEO/seguridad
     [ ] output: SSR (no static, no SPA)
 
 [ ] Configurar Tailwind v4:
-    [ ] npm install -D tailwindcss @tailwindcss/vite
+    [ ] pnpm install -D tailwindcss @tailwindcss/vite
     [ ] vite.config.ts: import tailwindcss from "@tailwindcss/vite"
     [ ] src/app.css: @import "tailwindcss";
     [ ] applyBaseStyles: false (shadcn-svelte maneja sus tokens)
 
 [ ] shadcn-svelte init:
-    [ ] npx shadcn-svelte@latest init
+    [ ] pnpm dlx shadcn-svelte@latest init
     [ ] baseColor: slate
     [ ] aliases: $lib/components/ui, $lib/utils, etc.
 
@@ -68,11 +68,11 @@
     [ ] Extras: tooltip, skeleton, progress, calendar
 
 [ ] Dependencias adicionales:
-    [ ] @tanstack/svelte-query
-    [ ] @tanstack/svelte-table
-    [ ] arktype
-    [ ] layerchart
-    [ ] lucide-svelte
+    [ ] @tanstack/svelte-query@6.1.28
+    [ ] @tanstack/svelte-table@9.0.0-alpha.47 ← v9 alpha requerida para Svelte 5
+    [ ] arktype@2.2.0
+    [ ] layerchart@2.0.0-next.63
+    [ ] @lucide/svelte ← paquete oficial para Svelte 5 (no lucide-svelte)
     [ ] date-fns (timezone America/La_Paz)
 
 [ ] Verificar: pnpm dev arranca sin errores en localhost:5173
@@ -173,7 +173,7 @@
 [ ] components/layout/Sidebar.svelte
     [ ] Navegación colapsable — $state collapsed
     [ ] Tooltips en modo colapsado
-    [ ] Iconos con lucide-svelte
+    [ ] Iconos con @lucide/svelte ← Svelte 5
     [ ] Items de MONITOREO (ADR 0020):
         [ ] NavItem: href="/dashboard" → Inicio
         [ ] NavItem: href="/dashboard/sedes" → Sedes
@@ -273,7 +273,7 @@
     [ ] Columnas: hostname, IP, tipo, sede, estado, última vez visto, acciones
 
 [ ] components/devices/DeviceTable.svelte
-    [ ] TanStack Table (svelte-table) para sorting/filtering
+    [ ] TanStack Table v9 alpha (svelte-table) para sorting/filtering ← Svelte 5
     [ ] Acciones por fila:
         [ ] Ver métricas → /devices/:id/metrics
         [ ] Editar → modal DeviceForm
@@ -366,7 +366,7 @@
     [ ] Nodos: dispositivos
         [ ] Tamaño proporcional a importancia (router > switch > AP)
         [ ] Color por estado: online (verde), offline (rojo), maintenance (azul), warning (amarillo)
-        [ ] Icono por tipo (lucide-svelte)
+        [ ] Icono por tipo (@lucide/svelte)
     [ ] Enlaces: device_links
         [ ] Grosor proporcional a bandwidth_mbps
         [ ] Color por tipo: ethernet (gris), fiber (azul claro), wireless (naranja)
@@ -569,7 +569,7 @@
     [ ] Conflict resolution: last-write-wins con timestamp del cliente
 
 [ ] src/lib/sync/db.ts — SQLite Wasm (opcional, fase avanzada):
-    [ ] sql.js o sqlite-wasm para cache local de datos de lectura
+    [ ] @sqlite.org/sqlite-wasm@3.53.0-build1 ← paquete oficial ES Module
     [ ] Tablas mirror: cached_devices, cached_metrics, cached_alerts
     [ ] Sync desde API → SQLite cuando online
     [ ] Lectura desde SQLite cuando offline
@@ -649,10 +649,10 @@
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
 │  FE.I — Fundación                                                      │
-│  ├─ SvelteKit SSR (@sveltejs/adapter-node)                             │
+│  ├─ SvelteKit SSR (@sveltejs/adapter-node@5.5.4)                       │
 │  ├─ Svelte 5 Runes + Tailwind v4 + shadcn-svelte                      │
 │  ├─ TanStack Query + ArkType + LayerChart                             │
-│  └─ lucide-svelte + date-fns                                          │
+│  └─ @lucide/svelte + date-fns                                         │
 │     └─ Ref: ADR 0017, ADR 0012                                        │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │
@@ -759,7 +759,7 @@
 │  ├─ Offline store (navigator.onLine, pending actions)                  │
 │  ├─ Sync queue (FIFO, IndexedDB, reintentos)                          │
 │  ├─ Sync engine (conflict resolution, token refresh)                  │
-│  ├─ SQLite Wasm cache (opcional fase avanzada)                        │
+│  ├─ SQLite Wasm cache (@sqlite.org/sqlite-wasm)                        │
 │  ├─ OfflineBanner (acciones pendientes, sync manual)                   │
 │  └─ SyncStatusIndicator (topbar)                                      │
 │     └─ Ref: ADR 0021, 0020                                           │
@@ -788,13 +788,15 @@
 | **Tailwind CSS v4** | https://tailwindcss.com/docs | Utility classes |
 | **shadcn-svelte** | https://shadcn-svelte.com | Componentes UI accesibles |
 | **TanStack Query** | https://tanstack.com/query/latest | Caching, mutations, refetching |
-| **TanStack Table** | https://tanstack.com/table/latest | Tablas con sorting/filtering/paginación |
+| **TanStack Table v9** | https://tanstack.com/table/latest | Tablas con sorting/filtering/paginación (v9 alpha para Svelte 5) |
 | **ArkType** | https://arktype.io | Validación runtime type-safe |
 | **LayerChart** | https://layerchart.com | Gráficos Svelte (line, area, pie, donut) |
+| **@lucide/svelte** | https://lucide.dev/guide/packages/svelte | Iconografía oficial para Svelte 5 |
 | **date-fns** | https://date-fns.org | Formateo de fechas con timezone |
 | **SSE** | https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events | Realtime streaming |
 | **Service Workers** | https://developer.mozilla.org/en-US/docs/Web/API/Service_Worker_API | Offline, caching, PWA |
 | **Web Locks API** | https://developer.mozilla.org/en-US/docs/Web/API/Web_Locks_API | Sync exclusivo (Local-First) |
+| **@sqlite.org/sqlite-wasm** | https://www.npmjs.com/package/@sqlite.org/sqlite-wasm | SQLite en browser vía WASM |
 
 ---
 
@@ -815,6 +817,7 @@
 | Tabla vacía | Sin dispositivos en DB | Crear sedes y dispositivos de prueba |
 | Filtros no funcionan | Query params mal enviados | Verificar API client y backend |
 | "Eliminar" no funciona | Backend usa archive, no DELETE | Cambiar acción a PUT /devices/:id/archive |
+| Error de tipos en tabla | TanStack Table v8 con Svelte 5 | Migrar a `@tanstack/svelte-table@9.0.0-alpha.47` |
 
 ### FE.VI — Métricas
 
@@ -848,6 +851,26 @@
 | App no instala | Manifest mal configurado | Validar en Chrome DevTools → Application |
 | Cache no actualiza | SW en modo cache-first | Cambiar a network-first para HTML |
 | Notificaciones no llegan | Push service no configurado | Configurar VAPID keys si se usa push |
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión anterior | Versión actual | Notas |
+|------------|------------------|----------------|-------|
+| `@sveltejs/adapter-node` | — | **5.5.4** | Última estable (feb 2026). SSR standalone. |
+| `@lucide/svelte` | `lucide-svelte` | **@lucide/svelte** | Paquete oficial para Svelte 5. `lucide-svelte` solo soporta Svelte 3/4. |
+| `@tanstack/svelte-table` | v8 implícita | **9.0.0-alpha.47** | v8 no compatible con Svelte 5. v9 alpha es la versión oficial compatible. |
+| `@tanstack/svelte-query` | — | **6.1.28** | Última estable (may 2026). |
+| `vitest` | v4.1 | **4.1.6** | Última patch estable (may 2026). |
+| `playwright` | v1.59 | **1.60.0** | Última estable (may 2026). |
+| `pnpm` | v10.27 | **11.1** | Última estable (may 2026). Requiere Node 22+. |
+| `node` | v26 | **26.1.0** (Current) / **24** LTS | Node 26.1.0 publicado 7 may 2026. |
+| `@sqlite.org/sqlite-wasm` | `sql.js` | **3.53.0-build1** | Paquete oficial SQLite WASM como ES Module. Reemplaza `sql.js` legacy. |
+| `arktype` | — | **2.2.0** | Última estable (mar 2026). |
+| `layerchart` | — | **2.0.0-next.63** | Última next (may 2026). Próximo a v2 estable. |
+| `tailwindcss` | v4 | **v4.1** | Última estable (abr 2026). |
+| `shadcn-svelte` | — | **1.2.7** | Última estable (abr 2026). |
 
 ---
 

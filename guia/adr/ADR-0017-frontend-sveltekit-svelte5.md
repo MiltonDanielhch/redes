@@ -1,11 +1,14 @@
 # ADR 0017 — Frontend: SvelteKit + Svelte 5 Runes + SSE + Local-First
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de dependencias tras auditoría contra npmjs.com, GitHub, crates.io y docs.rs.
+
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026-05-16 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Versión** | 2.0 (Corrección 2026) |
+| **Versión** | 2.2 (Corrección 2026-05-16) |
 | **Relacionado con** | ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0020 (Monitoreo Regional), ADR 0021 (Local-First Sync Offline), ADR 0022 (Agentes Distribuidos) |
 
 ---
@@ -143,13 +146,13 @@ apps/web/
 | Framework | SvelteKit | SSR, adapter-node | — |
 | Reactividad | Svelte 5 Runes | $state, $derived, $effect | — |
 | Lenguaje | TypeScript | strict mode | — |
-| Gestor de paquetes | pnpm | v10 | ADR 0012 |
-| Node | Node.js | v24 | ADR 0012 |
+| Gestor de paquetes | pnpm | v11.1 | ADR 0012 |
+| Node | Node.js | v26.1.0 (Current) / v24 LTS | ADR 0012 |
 | Estilos | TailwindCSS v4 | @tailwindcss/vite | FE.I |
 | Componentes UI | shadcn-svelte | baseColor: slate | FE.I |
-| Iconos | lucide-svelte | — | FE.I |
+| Iconos | @lucide/svelte | — | FE.I |
 | Data fetching | TanStack Query (Svelte Query) | staleTime 5min, retry 1 | FE.II |
-| Tablas | TanStack Table (Svelte Table) | sorting, filtering, pagination | FE.V |
+| Tablas | TanStack Table v9 alpha (Svelte 5) | sorting, filtering, pagination | FE.V |
 | Validación | ArkType | runtime type-safe | FE.II |
 | Gráficos | LayerChart | line, area, pie, donut, graph | FE.VI, FE.VII |
 | Fechas | date-fns | timezone America/La_Paz | FE.XII |
@@ -158,8 +161,8 @@ apps/web/
 | Realtime | SSE (EventSource) | reconexión automática, fallback polling | FE.VI |
 | Offline | IndexedDB + sync queue | FIFO, conflict resolution last-write-wins | FE.XI |
 | PWA | Service Worker | cache static, network-first API | FE.XII |
-| Testing unit | Vitest | — | ADR 0010 |
-| Testing E2E | Playwright | CI only | ADR 0010 |
+| Testing unit | Vitest | v4.1.6 | ADR 0010 |
+| Testing E2E | Playwright | v1.60.0 | ADR 0010 |
 | Lint | eslint-plugin-svelte | — | ADR 0010 |
 | Check | svelte-check | — | ADR 0010 |
 
@@ -168,6 +171,8 @@ apps/web/
 # Svelte 5 Runes
 
 Se adopta el nuevo sistema de reactividad explícita de Svelte 5.
+
+> **Nota:** Svelte 5.55.0 (mayo 2026) es la última estable. Incluye tipos exportados para `TweenOptions`, `SpringOptions`, `SpringUpdateOptions` y `Updater` desde `svelte/motion`. SvelteKit 2.57.0 incluye breaking changes en Remote Functions (requerir permiso del servidor para refrescar queries).
 
 ## Estado reactivo
 
@@ -307,7 +312,7 @@ export async function listDevices(params?: { sede_id?: string }): Promise<ListDe
 
 ## Restricciones
 
-* Evitar stores globales innecesarios (Svelte 5 Runes reemplaza Svelte stores clásicos)
+* Evitar stores globales innecesarias (Svelte 5 Runes reemplaza Svelte stores clásicos)
 * No usar Redux/Zustand/MobX
 * La cache de datos server pertenece a TanStack Query
 * Los tokens de auth se persisten en **localStorage encriptado** (subtle crypto) para multi-tab; la cookie httpOnly se usa para SSR
@@ -760,8 +765,8 @@ self.addEventListener("fetch", (event) => {
 # Docker deployment
 
 ```dockerfile
-# Containerfile (Node 24, no 22)
-FROM node:24-alpine AS builder
+# Containerfile (Node 26, no 22)
+FROM node:26.1.0-alpine AS builder
 
 WORKDIR /app
 
@@ -773,7 +778,7 @@ COPY . .
 
 RUN pnpm build
 
-FROM node:24-alpine
+FROM node:26.1.0-alpine
 
 WORKDIR /app
 
@@ -788,7 +793,7 @@ EXPOSE 3000
 CMD ["node", "build"]
 ```
 
-**Nota:** Se utiliza Node 24 (no 22) para alinearse con ADR 0012 y mise.toml.
+**Nota:** Se utiliza Node 26.1.0 (Current, mayo 2026) para alinearse con ADR 0012. Para producción conservadora, usar Node 24 LTS.
 
 ---
 
@@ -831,33 +836,29 @@ SvelteKit funciona únicamente como:
 
 # Herramientas y Librerías (Edición 2026)
 
-| Herramienta              | Propósito                              |
-| ------------------------ | -------------------------------------- |
-| `vite-bundle-visualizer` | Analizar tamaño del bundle             |
-| `playwright`             | E2E testing                            |
-| `vitest`                 | Unit testing rápido                    |
-| `svelte-check`           | Validación TypeScript/Svelte           |
-| `lucide-svelte`          | Iconografía                            |
-| `layerchart`             | Gráficos Svelte (line, area, pie, graph) |
-| `openapi-typescript`     | Tipos TypeScript desde OpenAPI         |
-| `tanstack-svelte-query` | Cache y data fetching                  |
-| `tanstack-svelte-table` | Tablas con sorting/filtering/pagination|
-| `arktype`                | Validación runtime type-safe           |
-| `date-fns`               | Formateo de fechas con timezone        |
-| `sonner`                 | Toasts no bloqueantes                  |
-| `eslint-plugin-svelte`   | Calidad de código                      |
+| Herramienta              | Propósito                              | Versión |
+| ------------------------ | -------------------------------------- | ------- |
+| `vite-bundle-visualizer` | Analizar tamaño del bundle             | latest |
+| `playwright`             | E2E testing                            | 1.60.0 |
+| `vitest`                 | Unit testing rápido                    | 4.1.6 |
+| `svelte-check`           | Validación TypeScript/Svelte           | latest |
+| `@lucide/svelte`          | Iconografía (Svelte 5)                 | latest |
+| `layerchart`             | Gráficos Svelte (line, area, pie, graph) | 2.0.0-next.63 |
+| `openapi-typescript`     | Tipos TypeScript desde OpenAPI         | latest |
+| `tanstack-svelte-query` | Cache y data fetching                  | 6.1.28 |
+| `@tanstack/svelte-table` | Tablas con sorting/filtering/pagination | 9.0.0-alpha.47 |
+| `arktype`                | Validación runtime type-safe           | 2.2.0 |
+| `date-fns`               | Formateo de fechas con timezone        | latest |
+| `sonner`                 | Toasts no bloqueantes                  | latest |
+| `eslint-plugin-svelte`   | Calidad de código                      | latest |
 
-**Cambios respecto a v1.0:**
-- Eliminado `zod` → reemplazado por **ArkType** (consistencia con FE.II)
-- Eliminado `ConnectRPC` / `@connectrpc/connect` → reemplazado por **REST + fetch + openapi-typescript**
-- Eliminado `buf generate` → reemplazado por **openapi-typescript** desde `/openapi.json`
-- Agregado **shadcn-svelte** como sistema de componentes UI
-- Agregado **TanStack Query** y **TanStack Table**
-- Agregado **LayerChart** para gráficos
-- Agregado **date-fns** con timezone Bolivia
-- Agregado secciones de **Local-First**, **PWA**, **Service Worker**
-- Agregado secciones de **Agentes**, **Topología**, **Formateo de dominio**
-- Node actualizado a **v24**
+**Cambios respecto a v2.1:**
+- **Iconos:** `lucide-svelte` reemplazado por **`@lucide/svelte`** (paquete oficial para Svelte 5). `lucide-svelte` solo soporta Svelte 3/4.
+- **Tablas:** `@tanstack/svelte-table` v8 solo soporta Svelte 3/4. Para Svelte 5 se usa la **v9 alpha** (`9.0.0-alpha.47`).
+- **pnpm** actualizado a **11.1** (mayo 2026). Requiere Node.js 22+; compatible con Node 26.
+- **Playwright** actualizado a **1.60.0** (mayo 2026).
+- **Vitest** actualizado a **4.1.6** (mayo 2026).
+- **Node.js** actualizado a **26.1.0** (Current, mayo 2026) / **24** LTS para producción.
 
 ---
 
@@ -889,6 +890,9 @@ SvelteKit funciona únicamente como:
 * Local-First añade complejidad frontend
   → Necesaria para operación en sedes con conectividad inestable (ADR 0021)
 
+* `@tanstack/svelte-table` v9 aún en alpha
+  → Riesgo menor; la API es estable y se mantiene bajo seguimiento. Alternativa: `tanstack-table-8-svelte-5` comunitario.
+
 ---
 
 # Decisiones derivadas
@@ -909,6 +913,7 @@ SvelteKit funciona únicamente como:
 * shadcn-svelte es la base de componentes UI accesibles
 * El Service Worker implementa network-first para API y cache-first para assets
 * Los formatters de red (Mbps, ms, bytes) usan locale es_BO
+* `@lucide/svelte` es el paquete oficial de iconos para Svelte 5
 
 ---
 
@@ -917,4 +922,24 @@ SvelteKit funciona únicamente como:
 | Versión | Fecha       | Cambios realizados |
 | ------- | ----------- | ------------------ |
 | 1.0     | 2026 (orig) | Versión inicial con ConnectRPC, buf generate, zod, Node 22 |
-| 2.0     | 2026-05-16  | Reemplaza ConnectRPC/buf por REST/OpenAPI; reemplaza zod por ArkType; agrega shadcn-svelte, TanStack Query/Table, LayerChart, date-fns; agrega Local-First, PWA, Service Worker; agrega secciones de agentes, topología, formateo Bolivia; actualiza Node a v24; corrige estrategia de auth (localStorage encriptado + cookies httpOnly) |
+| 2.0     | 2026-05-16  | Reemplaza ConnectRPC/buf por REST/OpenAPI; reemplaza zod por ArkType; agrega shadcn-svelte, TanStack Query/Table, LayerChart, date-fns; agrega Local-First, PWA, Service Worker; agrega secciones de agentes, topología, formateo Bolivia; actualiza Node a v24 |
+| 2.1     | 2026-05-16  | Actualiza Svelte a 5.55.0, SvelteKit a 2.57.0, Vitest a 4.1, Playwright a 1.59, LayerChart a 2.0.0-next.63, ArkType a 2.2.0, TanStack Svelte Query a 6.1.28, Lucide a 0.564.0, Node a v26 Current/v24 LTS, pnpm a 10.27 |
+| 2.2     | 2026-05-16  | **Correcciones críticas de versiones:** reemplaza `lucide-svelte` por `@lucide/svelte` (Svelte 5); actualiza pnpm a 11.1; Playwright a 1.60.0; Vitest a 4.1.6; Node a 26.1.0; aclara `@tanstack/svelte-table` v9 alpha para Svelte 5. |
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | Svelte | 5.45.0 | **5.55.0** | Tipos exportados desde `svelte/motion`. Última estable (may 2026). |
+| 2026-05-16 | SvelteKit | 2.x | **2.57.0** | Breaking changes en Remote Functions (requerir permiso servidor para refrescar queries). |
+| 2026-05-16 | Vitest | 3.x | **4.1.6** | Test Tags, context builder pattern, browser mode estable, Vite-native. Última patch (may 2026). |
+| 2026-05-16 | Playwright | 1.x | **1.60.0** | Screencast API, CLI debugger, async disposables, Chrome for Testing default. Última estable (may 2026). |
+| 2026-05-16 | LayerChart | 1.x | **2.0.0-next.63** | Próximo a v2 estable. Última next (may 2026). |
+| 2026-05-16 | ArkType | 1.x | **2.2.0** | TypeScript-syntax validation. Última estable (mar 2026). |
+| 2026-05-16 | TanStack Svelte Query | 5.x | **6.1.28** | Última estable (may 2026). |
+| 2026-05-16 | TanStack Svelte Table | 8.x | **9.0.0-alpha.47** | v8 no soporta Svelte 5. v9 alpha es la versión compatible. |
+| 2026-05-16 | Lucide | `lucide-svelte` | **`@lucide/svelte`** | Paquete oficial para Svelte 5. `lucide-svelte` es solo para Svelte 3/4. |
+| 2026-05-16 | Node.js | 24 | **26.1.0** (Current) / **24** LTS | Node 26.1.0 Current (may 2026). Node 24 LTS estable para producción. |
+| 2026-05-16 | pnpm | 10.27 | **11.1** | Última estable (may 2026). Requiere Node 22+. |

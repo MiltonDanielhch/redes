@@ -5,7 +5,7 @@
 | **Estado** | ✅ Aceptado |
 | **Fecha** | 2026-05-16 |
 | **Autores** | Milton Hipamo / Laboratorio 3030 |
-| **Versión** | 2.0 (Corrección 2026) |
+| **Versión** | 2.1 (Corrección 2026-05-16) |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0020 (Monitoreo Regional), ADR 0021 (Local-First), ADR 0008 (PASETO), ADR 0015 (Apalis), ADR 0013 (Docker Compose), ADR 0019 (Coolify Deploy) |
 
 ---
@@ -40,20 +40,31 @@ El agente:
 
 ## Stack del Agente
 
-| Componente | Tecnología | Justificación |
-|------------|-----------|---------------|
-| Lenguaje | Rust (Edition 2024) | Seguridad, performance, binario único |
-| DB local | SQLite (sqlx) | Ligero, sin servidor, sync offline (ADR 0021) |
-| HTTP client | reqwest | Estándar en ecosistema Rust |
-| Async runtime | tokio | Consistencia con backend (ADR 0003) |
-| Config | toml + env | Simple, legible, fail-fast (ADR 0002) |
-| Logging | tracing + tracing-subscriber | Observabilidad consistente con API |
-| SNMP | snmp crate o async-snmp | Recolección de métricas de dispositivos |
-| ICMP | surge-ping o tokio-icmp | Heartbeat y detección de dispositivos |
-| Sync | crates/sync/ (Rust) | Reutiliza lógica de sync con API central |
-| Auth | pasetors (PASETO v4 Local) | Consistencia con stack (ADR 0008) |
+| Componente | Tecnología | Versión fijada | Justificación |
+|------------|-----------|----------------|---------------|
+| Lenguaje | Rust (Edition 2024) | 1.95.0 | Seguridad, performance, binario único |
+| DB local | SQLite (sqlx) | `0.8.6` | Ligero, sin servidor, sync offline (ADR 0021) |
+| HTTP client | reqwest | `0.13.2` | Estándar en ecosistema Rust |
+| Async runtime | tokio | `1.52.3` | Consistencia con backend (ADR 0003) |
+| Config | toml + env | `0.8.22` | Simple, legible, fail-fast (ADR 0002) |
+| Logging | tracing + tracing-subscriber | `0.1.44` / `0.3.23` | Observabilidad consistente con API |
+| SNMP | snmp2 | `0.5.0` | Recolección de métricas de dispositivos |
+| ICMP | surge-ping | `0.8.4` | Heartbeat y detección de dispositivos |
+| Sync | crates/sync/ (Rust) | workspace | Reutiliza lógica de sync con API central |
+| Auth | pasetors | `0.7.8` | Consistencia con stack (ADR 0008) |
 
-**Nota (2026):** El agente reutiliza `crates/sync/` (Rust) para la lógica de sincronización offline, compartiendo patrones con el frontend (ADR 0021). Sin embargo, `crates/sync/` está diseñado para el **agente** (Rust), no para el frontend (TypeScript/SvelteKit). El frontend usa `apps/web/src/lib/sync/` (TypeScript).
+**Nota (2026-05-16):** El agente reutiliza `crates/sync/` (Rust) para la lógica de sincronización offline, compartiendo patrones con el frontend (ADR 0021). Sin embargo, `crates/sync/` está diseñado para el **agente** (Rust), no para el frontend (TypeScript/SvelteKit). El frontend usa `apps/web/src/lib/sync/` (TypeScript).
+
+**Cambios respecto a v2.0:**
+- `reqwest` actualizado a `0.13.2` (latest estable, 2025-12-15). Soporta HTTP/3 (h3), hyper-rustls, y mejora de performance sobre 0.12.x citeweb_search:16#19
+- `tokio` fijado a `1.52.3` (latest estable, 2026-05-08). LTS release hasta marzo 2027, MSRV 1.70 citeweb_search:16#1
+- `sqlx` fijado a `0.8.6` (current stable, 2025-05-19). Alpha 0.9.0 en desarrollo con soporte `smol` citeweb_search:16#14web_search:16#15
+- `tracing` fijado a `0.1.44` (dic 2025), `tracing-subscriber` a `0.3.23` (mar 2026). MSRV 1.65 citeweb_search:16#5web_search:16#8
+- `surge-ping` fijado a `0.8.4` (dic 2025). ICMP async con tokio citeweb_search:17#18
+- `snmp2` (fork de snmp original) fijado a `0.5.0` (mar 2026). SNMP v1/v2/v3 sync/async con traps y MIB support. Reemplaza `async-snmp` (pre-1.0, breaking changes probables) y `snmp` (abandonado, 0.2.2 de 2017) citeweb_search:17#22
+- `pasetors` fijado a `0.7.8` (feb 2026). MSRV 1.88.0, compatible con Rust 1.95.0 citeweb_search:17#7web_search:17#11
+- `toml` fijado a `0.8.22` (abr 2026). Native Rust encoder/decoder TOML 1.1.0 spec citeweb_search:17#38
+- Se elimina ambigüedad de `snmp` genérico — se especifica `snmp2` como crate oficial
 
 ---
 
@@ -75,14 +86,14 @@ El agente:
 │  │  Agente Rust (apps/agent)                           │  │
 │  │  ├─ SNMP poller (cada 60s)                         │  │
 │  │  ├─ ICMP discovery (cada 300s)                      │  │
-│  │  ├─ ARP scan (cada 600s)                            │  │
+│  │  ├─ ARP scan (cada 600s)                          │  │
 │  │  ├─ SQLite local (buffering)                        │  │
-│  │  ├─ Sync engine (crates/sync/)                        │  │
-│  │  │   ├─ detect_connectivity()                       │  │
-│  │  │   ├─ enqueue_operation()                          │  │
-│  │  │   ├─ process_queue()                             │  │
-│  │  │   └─ resolve_conflict()                          │  │
-│  │  └─ HTTP client (reqwest)                           │  │
+│  │  ├─ Sync engine (crates/sync/)                      │  │
+│  │  │   ├─ detect_connectivity()                     │  │
+│  │  │   ├─ enqueue_operation()                        │  │
+│  │  │   ├─ process_queue()                           │  │
+│  │  │   └─ resolve_conflict()                         │  │
+│  │  └─ HTTP client (reqwest 0.13.2)                  │  │
 │  └────────────────────────┬────────────────────────────┘  │
 │                           │                                │
 │                           │ HTTPS (cuando hay internet)   │
@@ -520,7 +531,7 @@ CREATE TABLE sync_queue (
 
 ```dockerfile
 # Build stage
-FROM rust:1.86-alpine AS builder
+FROM rust:1.95-alpine AS builder
 RUN apk add --no-cache musl-dev openssl-dev sqlite-dev
 WORKDIR /app
 COPY . .
@@ -535,7 +546,7 @@ ENV DATA_DIR=/var/lib/redes-agent/data
 ENTRYPOINT ["/redes-agent"]
 ```
 
-**Nota:** Se usa el **perfil `release-size`** definido en `Cargo.toml` workspace (ADR Génesis) para binario mínimo (~5-10MB).
+**Nota:** Se usa el **perfil `release-size`** definido en `Cargo.toml` workspace (ADR Génesis) para binario mínimo (~5-10MB). Rust 1.95.0 es la última estable al 16 de abril de 2026 (ADR 0019 v2.1).
 
 ### Script de instalación (systemd)
 
@@ -672,11 +683,19 @@ echo "4. Ver logs: sudo journalctl -u redes-agent -f"
 * **El agente usa `crates/sync/` (Rust)** para lógica de sync offline, compartiendo patrones con el backend
 * **El frontend usa `apps/web/src/lib/sync/` (TypeScript)** para sync offline — implementaciones separadas, estrategia compartida (ADR 0021)
 * **Perfil `release-size`** en `Cargo.toml` para binario mínimo del agente
-* **Containerfile distroless** para deploy Docker del agente
+* **Containerfile distroless** para deploy Docker del agente (Rust 1.95.0, ADR 0019 v2.1)
 * **Systemd hardening** (ProtectSystem, NoNewPrivileges) para instalación bare metal
 * **El dashboard admin muestra estado de agentes** (heartbeat, versión, pending sync, db size) — requiere endpoints `GET /api/v1/agents` (ADR 0020, ROADMAP-BACKEND.md Bloque VII)
 * **La API central debe exponer endpoints `/api/v1/agent/*`** separados de `/api/v1/sync/*` — los primeros para métricas, los segundos para operaciones frontend
 * **Tabla `agent_tokens` en PostgreSQL** para revocación y rotación de tokens
+* **snmp2 0.5.0** es el crate oficial para SNMP — soporta v1/v2/v3, sync/async, traps, MIBs (con feature `mibs`)
+* **surge-ping 0.8.4** es el crate oficial para ICMP async
+* **reqwest 0.13.2** como HTTP client — soporta HTTP/3, hyper-rustls, gzip automático
+* **tokio 1.52.3** como async runtime — LTS hasta marzo 2027
+* **sqlx 0.8.6** para SQLite local — async, compile-time checked queries
+* **pasetors 0.7.8** para tokens PASETO v4.local — MSRV 1.88.0, compatible con Rust 1.95.0
+* **tracing 0.1.44** + **tracing-subscriber 0.3.23** para observabilidad estructurada
+* **toml 0.8.22** para parsing de configuración TOML
 
 ---
 
@@ -686,3 +705,4 @@ echo "4. Ver logs: sudo journalctl -u redes-agent -f"
 | ------- | ----------- | ------------------ |
 | 1.0     | 2026 (orig) | Versión inicial con endpoints genéricos, sin scope `agent` en PASETO, sin tabla `agent_tokens`, sin distinguir `/agent/*` vs `/sync/*`, sin Containerfile, sin systemd hardening, sin índices SQLite, sin `release-size` profile |
 | 2.0     | 2026-05-16  | Agrega scope `agent` dedicado en PASETO con verificación explícita; agrega tabla `agent_tokens` y revocación; separa endpoints `/api/v1/agent/*` de `/api/v1/sync/*`; agrega Containerfile distroless con `release-size`; agrega script de instalación systemd con hardening; agrega índices SQLite y constraints CHECK; agrega campos `system_metrics` en heartbeat; agrega `UpdateVersion` en AgentCommand; agrega `discovery_ranges` en config; documenta uso de `crates/sync/` (Rust) vs `apps/web/src/lib/sync/` (TS); agrega decisiones derivadas de dashboard admin, tabla agent_tokens, y OTA |
+| 2.1     | 2026-05-16  | Fija versiones exactas de todas las dependencias: reqwest `0.13.2`, tokio `1.52.3`, sqlx `0.8.6`, tracing `0.1.44`, tracing-subscriber `0.3.23`, surge-ping `0.8.4`, snmp2 `0.5.0`, pasetors `0.7.8`, toml `0.8.22`; reemplaza `snmp` genérico/ambiguo por `snmp2` como crate oficial; actualiza Containerfile a Rust 1.95.0; actualiza decisiones derivadas con versiones específicas |

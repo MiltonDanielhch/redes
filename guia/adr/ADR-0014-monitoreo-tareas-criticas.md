@@ -233,12 +233,12 @@ crates/
 # crates/monitoring/Cargo.toml
 
 [dependencies]
-reqwest = { version = "0.13", features = ["json"], default-features = false }
+reqwest = { version = "0.13.3", features = ["json"], default-features = false }
 tokio = { version = "1.45", features = ["time"] }
 tracing = "0.1"
 ```
 
-**Nota:** `reqwest 0.13` usa `rustls` como TLS backend por defecto. Si se necesita `native-tls`, usar feature explícita.
+**Nota:** `reqwest 0.13.3` usa `rustls` como TLS backend por defecto. Si se necesita `native-tls`, usar feature explícita.
 
 ---
 
@@ -284,7 +284,7 @@ Si NO llega el ping:
 
 | Herramienta | Propósito | Versión | Estado |
 | ---------------- | -------------------------------------------------- | -------- | ------ |
-| `reqwest` | Cliente HTTP robusto con timeout y retries | 0.13.2 | ✅ Activa |
+| `reqwest` | Cliente HTTP robusto con timeout y retries | 0.13.3 | ✅ Activa |
 | `tracing` | Observabilidad estructurada | workspace | ✅ Activa |
 | Sentry Crons | Integrar errores + cron monitoring en un dashboard | 0.48.2 | ⏳ Requiere Rust 1.88+ |
 | Telegram Bot API | Alertas push inmediatas | — | ✅ Activa |
@@ -346,5 +346,16 @@ Combinar con:
 * `just deploy` registra automáticamente deploys exitosos
 * Los checks son opcionales en desarrollo local
 * El wrapper vive en `crates/monitoring/`
-* `reqwest 0.13` es la versión oficial para HTTP client
+* `reqwest 0.13.3` es la versión oficial para HTTP client
 * Sentry Crons se evaluará cuando el toolchain alcance Rust 1.88+
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **reqwest** | **0.13.3** | Última estable (abr 2026). `rustls` como TLS backend por defecto. Requiere activar features `json`, `form` si se usan. |
+| **tokio** | **1.45** | Serie 1.x estable. Features: `time`, `rt-multi-thread`, `macros`. |
+| **tracing** | **0.1.x** | Serie 0.1.x estable. Logging estructurado con spans. |
+| **Sentry Crons** | **0.48.2** | Requiere Rust 1.88+. Postergado hasta que el toolchain lo soporte. |

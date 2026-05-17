@@ -1,5 +1,8 @@
 # ADR 0004 — Persistencia con PostgreSQL + Docker
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de dependencias y herramientas tras auditoría contra repositorios oficiales (postgresql.org, pgadmin.org, docker.com, crates.io).
+
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
@@ -35,12 +38,14 @@ La persistencia debe soportar:
 
 ## Decisión
 
-Usar **PostgreSQL 16** ejecutándose en contenedor Docker
+Usar **PostgreSQL 17.10** ejecutándose en contenedor Docker
 como motor principal de persistencia del backend.
+
+> **Nota:** PostgreSQL 18.4 está disponible desde mayo 2026. Se evaluará para futuras migraciones una vez madure en entornos de producción restringidos.
 
 La integración con Rust se realizará mediante:
 
-* SQLx 0.8.5 (queries compile-time checked)
+* SQLx 0.8.6 (queries compile-time checked)
 * Migraciones versionadas (SQLx migrations)
 * Consultas tipadas (`#[sqlx::query_as]`)
 * Pool de conexiones async (PgPoolOptions)
@@ -53,10 +58,12 @@ La integración con Rust se realizará mediante:
 
 ### Docker Compose (servicio PostgreSQL)
 
+> **Nota sobre Docker Compose:** La herramienta saltó de v2 a v5 (v5.1.3 en Docker Desktop mayo 2026) para evitar confusión con los formatos de archivo legacy `2.x`/`3.x`. El plugin CLI sigue funcionando con `docker compose`.
+
 ```yaml
 services:
   postgres:
-    image: postgres:16.4-alpine
+    image: postgres:17.10-alpine
     container_name: redes_postgres
     restart: unless-stopped
 
@@ -82,6 +89,7 @@ services:
       timeout: 5s
       retries: 5
       start_period: 30s
+      start_interval: 2s   # check rápido durante startup (Compose v5+)
 
     command:
       - "postgres"
@@ -115,6 +123,7 @@ networks:
 ```conf
 # infra/docker/postgresql.conf
 # Optimizado para VPS con 1-2 vCPU, 2-4GB RAM
+# PostgreSQL 17.10
 
 # Memoria
 shared_buffers = 256MB
@@ -174,7 +183,7 @@ effective_io_concurrency = 200
 
 ```toml
 [dependencies]
-sqlx = { version = "0.8.5", features = [
+sqlx = { version = "0.8.6", features = [
     "runtime-tokio-rustls",
     "postgres",
     "macros",
@@ -263,6 +272,10 @@ sqlx migrate revert
 
 ## Estrategia de backups
 
+### ⚠️ Cambio importante: pgBackRest ya no se mantiene
+
+> **Alerta de mantenimiento (2026):** El autor original de pgBackRest anunció que el proyecto deja de recibir mantenimiento activo después de 13 años. La última versión publicada es 2.58.0 (enero 2026). No se esperan nuevas funciones ni parches de seguridad. Por esta razón, el ADR migra la estrategia de backup corporativa a **Barman** (EnterpriseDB), herramienta madura y activamente mantenida en el ecosistema PostgreSQL.
+
 ### Nivel 1: pg_dump (full backup)
 
 ```bash
@@ -273,28 +286,39 @@ pg_dump -h localhost -U postgres -d redes -F c -f /backups/redes_$(date +%Y%m%d_
 pg_restore -h localhost -U postgres -d redes --clean /backups/redes_YYYYMMDD_HHMMSS.dump
 ```
 
-### Nivel 2: WAL Archiving (point-in-time recovery)
+### Nivel 2: Barman (backups incrementales + PITR)
 
-```bash
-# Configurar pgbackrest (herramienta recomendada)
-# infra/docker/pgbackrest.conf
-
-[global]
-repo1-path=/backups
-repo1-retention-full=7
-repo1-retention-diff=4
+```ini
+# /etc/barman.conf
+[barman]
+backup_directory = /backups/barman
+configuration_files_directory = /etc/barman.d
+log_level = info
+compression = gzip
+retention_policy = RECOVERY WINDOW OF 7 DAYS
+wal_retention_policy = main
 
 [redes]
-pg1-path=/var/lib/postgresql/data
+description = "Redes Beni PostgreSQL"
+conninfo = host=postgres port=5432 user=barman dbname=postgres
+backup_method = rsync
+archiver = on
+streaming_archiver = on
+slot_name = barman
+```
 
-# Backup incremental
-pgbackrest --stanza=redes backup --type=incr
+```bash
+# Backup full (semanal)
+barman backup redes
 
-# Backup full semanal
-pgbackrest --stanza=redes backup --type=full
+# Backup incremental (diario)
+barman backup redes --incremental
+
+# Listar backups
+barman list-backup redes
 
 # Point-in-time recovery
-pgbackrest --stanza=redes restore --type=time --target="2026-05-16 14:30:00"
+barman recover redes LATEST --target-time "2026-05-16 14:30:00" --remote-ssh-command "ssh postgres@servidor"
 ```
 
 ### Nivel 3: Snapshots de volumen Docker
@@ -306,12 +330,12 @@ docker run --rm -v redes_postgres_data:/data -v $(pwd)/snapshots:/backup alpine 
 
 ### Política de retención
 
-| Tipo | Frecuencia | Retención |
-|------|-----------|-----------|
-| pg_dump full | Diario | 7 días |
-| pgbackrest incremental | Cada 6h | 4 días |
-| pgbackrest full | Semanal | 4 semanas |
-| Docker snapshot | Semanal | 2 semanas |
+| Tipo | Frecuencia | Retención | Herramienta |
+|------|-----------|-----------|-------------|
+| pg_dump full | Diario | 7 días | pg_dump |
+| Barman incremental | Diario | 7 días | Barman |
+| Barman full | Semanal | 4 semanas | Barman |
+| Docker snapshot | Semanal | 2 semanas | tar |
 
 ---
 
@@ -348,11 +372,11 @@ NO se incluyen en el MVP:
 
 El sistema utiliza:
 
-* PostgreSQL 16 (backend principal)
-* SQLx 0.8.5 (driver async Rust)
-* Docker Compose (orquestación)
+* PostgreSQL 17.10 (backend principal)
+* SQLx 0.8.6 (driver async Rust)
+* Docker Compose v5.1+ (orquestación)
 * Migraciones SQLx (versionadas)
-* pgbackrest (backups incrementales)
+* Barman (backups incrementales + PITR)
 
 ---
 
@@ -366,6 +390,7 @@ El sistema utiliza:
 | Prisma ORM | Abstracción excesiva, menos control sobre queries |
 | Diesel | Mayor fricción async, compile-time más lento |
 | TimescaleDB | Overkill para MVP (evaluar si métricas > 10M/mes) |
+| pgBackRest | Proyecto abandonado en 2026; sin mantenimiento ni parches futuros |
 
 ---
 
@@ -373,13 +398,13 @@ El sistema utiliza:
 
 | Herramienta | Propósito | Versión |
 |-------------|-----------|---------|
-| `sqlx-cli` | CLI de migraciones y prepare | `0.8.5` |
-| `pgAdmin` | Administración visual | `4` |
-| `pg_dump` / `pg_restore` | Backups full | PostgreSQL 16 |
-| `pgbackrest` | Backups incrementales + PITR | `2.53` |
-| `docker compose` | Orquestación de servicios | `2.25+` |
-| `cargo-nextest` | Tests rápidos | `0.9` |
-| `pgbench` | Benchmark de PostgreSQL | PostgreSQL 16 |
+| `sqlx-cli` | CLI de migraciones y prepare | `0.8.6` |
+| `pgAdmin` | Administración visual | `4 v9.15` |
+| `pg_dump` / `pg_restore` | Backups full | PostgreSQL 17 |
+| `barman` | Backups incrementales + PITR | `3.x` |
+| `docker compose` | Orquestación de servicios | `v5.1+` |
+| `cargo-nextest` | Tests rápidos | `0.9.135` |
+| `pgbench` | Benchmark de PostgreSQL | PostgreSQL 17 |
 
 ---
 
@@ -419,14 +444,14 @@ GROUP BY state;
 * Fácil despliegue con Docker (imagen oficial, documentada)
 * Comunidad madura y extensa
 * Capacidad analítica (reportes, agregaciones, rollup)
-* Point-in-time recovery con WAL archiving
+* Point-in-time recovery con WAL archiving (Barman)
 * Healthcheck nativo para orquestación
 
 ---
 
 ### ⚠️ Trade-offs
 
-* Requiere gestión de backups (automatizar con pgbackrest)
+* Requiere gestión de backups (automatizar con Barman)
 * Necesita monitoreo de espacio en disco y queries lentas
 * Mayor complejidad operativa que SQLite (pero necesaria para concurrencia)
 * Configuración de performance requiere ajuste según VPS
@@ -463,5 +488,19 @@ Una capa de persistencia:
 * predecible (pool configurado, healthcheck),
 * compatible con Rust async (Tokio + SQLx),
 * fácil de operar (Docker, pgAdmin),
-* con backups confiables (pg_dump + pgbackrest),
+* con backups confiables (pg_dump + Barman),
 * y preparada para crecimiento progresivo (particionamiento, índices, WAL).
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | PostgreSQL | 16.4 | **17.10** | Salto a serie 17 (soporte hasta nov 2029). PG 18.4 disponible. |
+| 2026-05-16 | Imagen Docker | `postgres:16.4-alpine` | **`postgres:17.10-alpine`** | Alpine Linux actualizado |
+| 2026-05-16 | SQLx | 0.8.5 | **0.8.6** | Patch release con fixes |
+| 2026-05-16 | pgAdmin | 4 (genérico) | **4 v9.15** | Incluye 8 fixes de seguridad (CVE-2026-7813 a 7820) |
+| 2026-05-16 | Docker Compose | 2.25+ | **v5.1+** | Salto de versión major (evita confusión con formatos legacy) |
+| 2026-05-16 | cargo-nextest | 0.9 | **0.9.135** | Actualización de runner de tests |
+| 2026-05-16 | Backup tool | pgBackRest 2.53 | **Barman 3.x** | pgBackRest abandonado en 2026; última versión 2.58.0 sin soporte futuro |

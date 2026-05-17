@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado — implementación progresiva desde Fase 2                                                                                             |
 | **Fecha**           | 2026-05-16                                                                                                                                      |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                |
-| **Versión**         | 2.0 (Corrección 2026)                                                                                                                           |
+| **Versión**         | 2.1 (Corrección 2026-05-16)                                                                                                                     |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0005 (Migraciones SQL), ADR 0006 (RBAC + Audit), ADR 0010 (Testing), ADR 0016 (OpenAPI), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
@@ -59,11 +59,11 @@ Necesitamos una herramienta que:
 
 Desarrollar **Sintonía CLI**, una herramienta interna escrita en Rust usando:
 
-* `clap`
-* `tera`
-* `walkdir`
-* `syn`
-* `quote`
+* `clap` v4.6.1
+* `tera` v1.20.1
+* `walkdir` v2.5.0
+* `syn` v2.0
+* `quote` v1.0.45
 
 La CLI se implementa **después de construir manualmente 3 módulos reales**.
 
@@ -295,8 +295,8 @@ Sintonía evita manipulación frágil basada únicamente en strings.
 
 Usa:
 
-* `syn`
-* `quote`
+* `syn` v2.0
+* `quote` v1.0.45
 
 para modificar:
 
@@ -520,19 +520,29 @@ async fn should_return_201_on_create_device() {
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+# Herramientas y Librerías para Optimizar (Edición 2026-05-16)
 
-| Herramienta      | Propósito                            |
-| ---------------- | ------------------------------------ |
-| `clap`           | CLI robusta y tipada                 |
-| `tera`           | Templates reutilizables              |
-| `syn`            | Parsing AST Rust                     |
-| `quote`          | Generación AST                       |
-| `walkdir`        | Exploración de archivos              |
-| `comfy-table`    | Output visual profesional            |
-| `clap_mangen`    | Generación automática de páginas man |
-| `cargo_metadata` | Inspección del workspace Rust        |
-| `time`           | Crate de fechas (no `chrono`)       |
+| Herramienta      | Versión fijada | Propósito                            |
+| ---------------- | -------------- | ------------------------------------ |
+| `clap`           | `4.6.1`        | CLI robusta y tipada                 |
+| `tera`           | `1.20.1`       | Templates reutilizables              |
+| `syn`            | `2.0`          | Parsing AST Rust                     |
+| `quote`          | `1.0.45`       | Generación AST                       |
+| `walkdir`        | `2.5.0`        | Exploración de archivos              |
+| `comfy-table`    | `7.2.2`        | Output visual profesional            |
+| `clap_mangen`    | `0.3.0`        | Generación automática de páginas man |
+| `cargo_metadata` | `0.23.1`       | Inspección del workspace Rust        |
+| `time`           | `0.3.47`       | Crate de fechas (no `chrono`)        |
+| `cargo-nextest`  | `0.9.135`      | Runner de tests (CI y local)         |
+
+**Cambios respecto a v2.0:**
+- Se fijan versiones exactas de todas las dependencias del CLI basadas en latest estable al 2026-05-16
+- `clap` 4.6.1 (2026-05-14), `tera` 1.20.1 (2025-10-30), `quote` 1.0.45 (2026-03-03)
+- `walkdir` 2.5.0, `comfy-table` 7.2.2 (2026-01-13), `cargo_metadata` 0.23.1
+- `time` 0.3.47 (2026-02-04), `cargo-nextest` 0.9.135 (2026-05-14)
+- `clap_mangen` 0.3.0 (compatible con clap 4.6.x)
+- `syn` 2.0 (latest estable v2.x, compatible con quote 1.0.45)
+- Se eliminan referencias a ConnectRPC/gRPC/Protobuf en toda la arquitectura y validaciones
 
 ---
 
@@ -575,7 +585,7 @@ async fn should_return_201_on_create_device() {
 
 ### AST editing añade complejidad
 
-→ mitigado usando `syn` en lugar de regex frágiles
+→ mitigado usando `syn` v2.0 en lugar de regex frágiles
 
 → los marcadores limitan el alcance de modificaciones
 
@@ -594,9 +604,10 @@ async fn should_return_201_on_create_device() {
 * Los templates `.tera` son parte crítica del sistema y se versionan en git
 * **No se generan archivos `.proto` ni servicios RPC** — el proyecto usa REST + OpenAPI
 * **JWT está prohibido** — el generador usa PASETO en todos los handlers y tests
-* **Se usa `time` crate** — el generador no usa `chrono` en entidades ni migraciones
+* **Se usa `time` crate `0.3.47`** — el generador no usa `chrono` en entidades ni migraciones
 * Los seeds RBAC se generan para PostgreSQL (`ON CONFLICT`), no SQLite
 * El CLI respeta la estructura de crates del workspace: `domain`, `application`, `database`, `infrastructure`
+* Los tests del CLI usan `cargo nextest` v0.9.135 como runner oficial
 
 ---
 
@@ -606,3 +617,4 @@ async fn should_return_201_on_create_device() {
 | ------- | ----------- | ------------------ |
 | 1.0     | 2026 (orig) | Versión inicial con ConnectRPC, Protobuf, `project`/`report` como módulos de ejemplo, SQLite (`INSERT OR IGNORE`), `chrono` implícito |
 | 2.0     | 2026-05-16  | Elimina ConnectRPC/gRPC/Protobuf del CLI y validaciones; reemplaza módulos genéricos (`project`, `report`, `acta`) por dominio real (`users`, `sedes`, `devices`); actualiza SQL a PostgreSQL (`ON CONFLICT`); agrega validación de `time` vs `chrono` y `jsonwebtoken` ausente; actualiza Fase 4; actualiza ejemplos de salida |
+| 2.1     | 2026-05-16  | Fija versiones exactas de todas las dependencias del CLI: `clap` 4.6.1, `tera` 1.20.1, `syn` 2.0, `quote` 1.0.45, `walkdir` 2.5.0, `comfy-table` 7.2.2, `clap_mangen` 0.3.0, `cargo_metadata` 0.23.1, `time` 0.3.47, `cargo-nextest` 0.9.135; compatibilidad verificada entre `syn` 2.0 y `quote` 1.0.45; elimina toda referencia residual a Protobuf/ConnectRPC |

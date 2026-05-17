@@ -1,5 +1,8 @@
 # ADR 0005 — Migraciones SQLx y Seeding Idempotente
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de herramientas tras auditoría contra crates.io, GitHub y repositorios oficiales.
+
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
@@ -324,6 +327,8 @@ ON CONFLICT DO NOTHING;
 
 ## Automatización con justfile
 
+> **Nota:** `just` 1.51.0 (mayo 2026) incluye mejoras en manejo de módulos, atributos `[no-cd]` y funciones de path. No hay breaking changes desde 1.40.
+
 ```makefile
 # ── Migraciones ───────────────────────────────────────────
 
@@ -334,9 +339,9 @@ migrate:
     cargo run --bin cli seed-development
 
 # Producción: migraciones manuales (con confirmación)
+[migrate-prod]
+[confirm("¿Backup realizado? Esto es PRODUCCIÓN.")]
 migrate-prod:
-    @echo "⚠️  ESTO ES PRODUCCIÓN"
-    @read -p "¿Backup realizado? (yes/no): " confirm && [ $$confirm = "yes" ] || exit 1
     sqlx migrate run
     cargo run --bin cli seed-system
 
@@ -415,7 +420,7 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:16.4-alpine
+        image: postgres:17.10-alpine
         env:
           POSTGRES_PASSWORD: postgres
         options: >-
@@ -516,11 +521,11 @@ El sistema utiliza:
 
 | Herramienta | Propósito | Versión |
 |-------------|-----------|---------|
-| `sqlx-cli` | CLI de migraciones y prepare | `0.8.5` |
-| `just` | Automatización de comandos | `1.40` |
-| `cargo-nextest` | Tests rápidos y paralelos | `0.9` |
-| `pg_dump` | Backups full | PostgreSQL 16 |
-| `docker compose` | Orquestación local | `2.25+` |
+| `sqlx-cli` | CLI de migraciones y prepare | `0.8.6` |
+| `just` | Automatización de comandos | `1.51.0` |
+| `cargo-nextest` | Tests rápidos y paralelos | `0.9.135` |
+| `pg_dump` | Backups full | PostgreSQL 17 |
+| `docker compose` | Orquestación local | `v5.1+` |
 
 ---
 
@@ -591,3 +596,15 @@ Un sistema de persistencia:
 * fácil de desplegar (Docker + SQLx),
 * preparado para evolucionar sin pérdida de consistencia,
 * y con datos mínimos de sistema listos para producción (roles, permisos, admin).
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | sqlx-cli | 0.8.5 | **0.8.6** | Patch release con fixes |
+| 2026-05-16 | just | 1.40 | **1.51.0** | Nuevas funciones: módulos, `[no-cd]`, path functions. Sin breaking changes. |
+| 2026-05-16 | cargo-nextest | 0.9 | **0.9.135** | Actualización de runner de tests |
+| 2026-05-16 | PostgreSQL (CI) | 16.4 | **17.10** | Alineado con ADR 0004 |
+| 2026-05-16 | docker compose | 2.25+ | **v5.1+** | Alineado con ADR 0013 |

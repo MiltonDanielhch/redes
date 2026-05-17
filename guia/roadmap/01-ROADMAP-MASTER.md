@@ -25,7 +25,7 @@
 ```
 DÍA 1 ─── GÉNESIS
 │         Workspace + crates (domain, application, infrastructure, database)
-│         + tooling (mise, just, lefthook)
+│         + tooling (mise v2026.5.10, just, lefthook v2.1.6)
 │         + estructura del proyecto según ADR 0020
 │         cargo check --workspace ✓
 │
@@ -59,18 +59,18 @@ DÍA 8 ─── MONITOREO III — Topología
 │         Visualización de conexiones
 │
 DÍA 9 ─── INFRA — Deploy
-│         Containerfile + Caddy + Kamal + Litestream
+│         Containerfile + Caddy v2.11.3 + Kamal + pg_dump (no Litestream)
 │         just deploy ✓ + kamal rollback ✓
 │
 ─────────── MVP EN PRODUCCIÓN ────────────────────────────
 │
 DÍA 10+ ─ AGENTES DISTRIBUIDOS
-│         Agentes en sedes remotas
-│         Sincronización offline
+│         Agentes en sedes remotas (Rust 1.95.0, reqwest 0.13.2, snmp2 0.5.0)
+│         Sincronización offline (crates/sync/ Rust + sqlx 0.8.6)
 │
 DÍA 12+ ─ LOCAL-FIRST
 │         PostgreSQL en servidor
-│         Sync queue para operación offline
+│         Sync queue para operación offline (@sqlite.org/sqlite-wasm 3.53.0-build1)
 ```
 
 ---
@@ -79,7 +79,7 @@ DÍA 12+ ─ LOCAL-FIRST
 
 | Tarea A | Tarea B | Se pueden hacer en paralelo? |
 |---------|---------|------------------------------|
-| Backend I — Migraciones | Frontend I — Setup Astro | ✅ Sí — no se tocan |
+| Backend I — Migraciones | Frontend I — Setup SvelteKit | ✅ Sí — no se tocan |
 | Backend II — Axum | Frontend I — Setup SvelteKit | ✅ Sí |
 | Backend III — Auth | Frontend II — Tipos + store | ✅ Sí |
 | Backend IV — OpenAPI | Frontend III — Layouts | ⚠️ Parcial — Requiere contrato |
@@ -93,7 +93,8 @@ DÍA 12+ ─ LOCAL-FIRST
 ### Génesis
 ```
 cargo check --workspace  → verde
-cargo deny check         → verde
+cargo deny 0.19.6 check  → verde
+cargo audit check        → verde
 just --list              → muestra todos los comandos
 grep "jsonwebtoken" .    → cero resultados
 ```
@@ -132,8 +133,8 @@ Alertas → notificaciones por canales múltiples
 just deploy → funciona desde la laptop
 https://tudominio.com/health → {"status":"ok"}
 kamal rollback → < 10 segundos
-Imagen Docker < 15MB
-litestream snapshots → entradas de hoy
+Imagen Docker < 15MB (distroless)
+pg_dump backups → entradas de hoy (no Litestream)
 ```
 
 ---
@@ -147,14 +148,14 @@ litestream snapshots → entradas de hoy
 | 3 | JWT prohibido — solo PASETO v4 Local | `jsonwebtoken` fuera del workspace | 0008 |
 | 4 | Soft Delete — nunca DELETE real | Trigger deleted_at | 0006 |
 | 5 | Toda acción autenticada se audita | audit_middleware automático | 0006 |
-| 6 | Tipos TypeScript por buf generate | CI verifica diff en api.ts | 0027 |
-| 7 | cargo-deny + cargo-audit en CI | just audit antes de deploy | 0010 |
-| 8 | Imagen distroless — ~10MB, sin shell | Containerfile | 0013 |
-| 9 | Fail-fast en config al arrancar | AppConfig::load() | 0002 |
+| 6 | Tipos TypeScript por openapi-typescript 7.13.0 | CI verifica diff en api-types.ts | 0016 |
+| 7 | cargo-deny 0.19.6 + cargo-audit en CI | just audit antes de deploy | 0010 |
+| 8 | Imagen distroless — ~10MB, sin shell | Containerfile (Rust 1.95.0) | 0013 |
+| 9 | Fail-fast en config al arrancar | AppConfig::load() (toml 0.8.22) | 0002 |
 | 10 | No añadir Fase 2 hasta que el problema exista | Decisión consciente | 0011 |
-| 11 | Local-First para operación offline | SQLite Wasm + sync queue | 0020 |
+| 11 | Local-First para operación offline | @sqlite.org/sqlite-wasm 3.53.0-build1 + sync queue | 0021 |
 | 12 | SSE preferido sobre WebSockets | ADR 0020 | 0020 |
-| 13 | Agentes ligeros en sedes remotas | ADR 0020 | 0020 |
+| 13 | Agentes ligeros en sedes remotas | ADR 0020 (Rust 1.95.0, reqwest 0.13.2, snmp2 0.5.0) | 0020 |
 
 ---
 
@@ -186,27 +187,40 @@ litestream snapshots → entradas de hoy
 | `ROADMAP-BACKEND.md` | Backend completo con checklist integrado |
 | `ROADMAP-FRONTEND.md` | Frontend completo con checklist integrado |
 | `ROADMAP-AUTH-FULLSTACK.md` | Login/Registro back+front coordinados |
-| `ROADMAP-INFRA.md` | Deploy, Caddy, Kamal, Litestream |
+| `ROADMAP-INFRA.md` | Deploy, Caddy v2.11.3, Kamal, pg_dump (no Litestream) |
 | `ROADMAP-MONITOREO.md` | Monitoreo de red (inventario, métricas, topología) |
-| `guia/adr/` | 20 ADRs activos (incluye ADR 0020) |
+| `guia/adr/` | 20+ ADRs activos (incluye ADR 0020 v2.1) |
 
 ---
 
 ## Stack Tecnológico del Proyecto
 
-| Componente | Tecnología | ADR |
-|------------|------------|-----|
-| Backend | Rust + Axum | ADR 0003 |
-| Frontend | SvelteKit + Svelte 5 | ADR 0017 |
-| DB | PostgreSQL | ADR 0004 |
-| Deploy | Coolify | ADR 0019 |
-| Auth | PASETO | ADR 0008 |
-| Jobs | Apalis | ADR 0015 |
-| Monitoreo | Healthchecks.io | ADR 0014 |
-| Realtime | SSE | ADR 0017, ADR 0020 |
-| API Docs | OpenAPI + Utoipa | ADR 0016 |
-| SNMP | snmp crate | ADR 0020 |
-| Topología | LayerChart | ADR 0020 |
+| Componente | Tecnología | Versión | ADR |
+|------------|------------|---------|-----|
+| Backend | Rust + Axum | 1.95.0 / latest | ADR 0003 |
+| Frontend | SvelteKit + Svelte 5 | 2.x / 5.x | ADR 0017 |
+| DB | PostgreSQL | 17+ | ADR 0004 |
+| Deploy | Coolify (alternativa) / Kamal (principal MVP) | latest / latest | ADR 0019 |
+| Auth | PASETO | pasetors 0.7.8 | ADR 0008 |
+| Jobs | Apalis | 1.0.0-rc.9 | ADR 0015 |
+| Monitoreo | Healthchecks.io | SaaS (latest) | ADR 0014 |
+| Realtime | SSE | nativo Axum | ADR 0017, ADR 0020 |
+| API Docs | OpenAPI + Utoipa | 5.5.0 | ADR 0016 |
+| SNMP | snmp2 | 0.5.0 | ADR 0020 |
+| Topología | LayerChart | latest | ADR 0020 |
+| Local-First SQLite | @sqlite.org/sqlite-wasm | 3.53.0-build1 | ADR 0021 |
+| Sync Frontend | uuid v7 | uuid@14.0.0 | ADR 0021 |
+| HTTP Client Agente | reqwest | 0.13.2 | ADR 0022 |
+| ICMP Agente | surge-ping | 0.8.4 | ADR 0022 |
+| Async Runtime | tokio | 1.52.3 (LTS) | ADR 0003, ADR 0022 |
+| Config Agente | toml | 0.8.22 | ADR 0022 |
+| Observabilidad | tracing + tracing-subscriber | 0.1.44 / 0.3.23 | ADR 0022 |
+| Reverse Proxy Kamal | Caddy | 2.11.3 | ADR 0019 |
+| Reverse Proxy Coolify | Traefik | 3.7.1 | ADR 0019 |
+| Tooling | mise | v2026.5.10 | Workspace |
+| Git Hooks | lefthook | 2.1.6 | Workspace |
+| Linting Rust | cargo-deny | 0.19.6 | CI |
+| Audit Rust | cargo-audit | latest | CI |
 
 ---
 
@@ -224,4 +238,30 @@ litestream snapshots → entradas de hoy
 
 ---
 
-**Nota:** Este roadmap está basado en el ADR 0020 que define el proyecto de Monitoreo de Infraestructura Regional para la Gobernación del Beni.
+## Notas de corrección (v2.0 → v2.1)
+
+**Cambios aplicados al 2026-05-16:**
+
+1. **Tooling:** Se especifican versiones exactas: mise `v2026.5.10`, lefthook `2.1.6`, cargo-deny `0.19.6`
+2. **Deploy:** Se elimina Litestream (es para SQLite, el proyecto usa PostgreSQL). Se reemplaza por `pg_dump` + cron/Apalis job
+3. **Containerfile:** Rust actualizado de `1.86` a `1.95.0` (latest estable al 16 abr 2026)
+4. **Caddy:** Fijado a `v2.11.3` (latest estable al 11 may 2026)
+5. **Traefik:** Fijado a `v3.7.1` (latest estable al 11 may 2026) para escenario Coolify
+6. **Tipos TypeScript:** Se corrige referencia de `buf generate` (gRPC/Protobuf) a `openapi-typescript@7.13.0` (OpenAPI/REST). El proyecto usa REST + OpenAPI, no gRPC
+7. **Agentes:** Se especifican versiones: reqwest `0.13.2`, snmp2 `0.5.0`, tokio `1.52.3`, toml `0.8.22`
+8. **Local-First:** Se especifica `@sqlite.org/sqlite-wasm` `3.53.0-build1` y `uuid@14.0.0` para UUID v7
+9. **Observabilidad:** tracing `0.1.44`, tracing-subscriber `0.3.23`
+10. **Auth:** pasetors `0.7.8`
+11. **API Docs:** utoipa `5.5.0`
+12. **Jobs:** Apalis `1.0.0-rc.9`
+13. **Config Agente:** toml `0.8.22`
+
+---
+
+## Historial de cambios
+
+| Versión | Fecha       | Cambios realizados |
+| ------- | ----------- | ------------------ |
+| 1.0     | 2026 (orig) | Versión inicial con Litestream, buf generate, Rust 1.86, versiones genéricas |
+| 2.0     | 2026-05-16  | Elimina Litestream (reemplaza por pg_dump), corrige buf generate a openapi-typescript, actualiza Rust a 1.95.0, agrega versiones de Caddy y Traefik |
+| 2.1     | 2026-05-16  | Fija versiones exactas de todas las dependencias y herramientas: mise v2026.5.10, lefthook 2.1.6, cargo-deny 0.19.6, reqwest 0.13.2, snmp2 0.5.0, tokio 1.52.3, toml 0.8.22, tracing 0.1.44, tracing-subscriber 0.3.23, pasetors 0.7.8, utoipa 5.5.0, Apalis 1.0.0-rc.9, @sqlite.org/sqlite-wasm 3.53.0-build1, uuid 14.0.0; actualiza stack tecnológico completo con tabla de versiones |

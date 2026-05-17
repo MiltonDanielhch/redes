@@ -6,7 +6,7 @@
 | **Fecha**           | 2026-05-16                                                                                       |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                 |
 | **Relacionado con** | ADR 0012 (Tooling), ADR 0003 (Backend Axum), ADR 0014 (Monitoreo), ADR 0019 (Coolify) |
-| **Última revisión** | 2026-05-16 — Agregado Dockerfile multi-stage + cargo-chef + distroless |
+| **Última revisión** | 2026-05-16 — Corrección de versiones + actualización a Debian 13 + Node 26 |
 
 ---
 
@@ -86,7 +86,7 @@ La plataforma se ejecuta mediante:
 infra/
 ├── docker/
 │   ├── backend.Dockerfile      # Multi-stage Rust + cargo-chef + distroless
-│   ├── frontend.Dockerfile     # SvelteKit + Node 24
+│   ├── frontend.Dockerfile     # SvelteKit + Node 26
 │   ├── .dockerignore           # Exclusiones de contexto
 │   └── docker-compose.yml      # Orquestación oficial
 │
@@ -102,18 +102,18 @@ infra/
 # Ubicación: `infra/docker/backend.Dockerfile`
 #
 # Descripción: Multi-stage build para backend Rust. Usa cargo-chef para cachear
-#              dependencias y distroless/static como runtime final (~10MB).
+#              dependencias y distroless/static-debian13 como runtime final (~10MB).
 #
 # ADRs: 0013, 0003, 0019
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 1: Planner — genera recipe.json de dependencias
+# Stage 1: Chef — imagen base con cargo-chef y Rust
 # ─────────────────────────────────────────────────────────────────────────────
-FROM lukemathwalker/cargo-chef:latest-rust-1.86 AS chef
+FROM lukemathwalker/cargo-chef:0.1.77-rust-1.95 AS chef
 WORKDIR /app
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 2: Planner — computa recipe.json
+# Stage 2: Planner — genera recipe.json de dependencias
 # ─────────────────────────────────────────────────────────────────────────────
 FROM chef AS planner
 COPY . .
@@ -138,9 +138,9 @@ COPY . .
 RUN cargo build --release --bin api --target x86_64-unknown-linux-musl
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 4: Runtime — distroless/static con nonroot
+# Stage 4: Runtime — distroless/static-debian13 con nonroot
 # ─────────────────────────────────────────────────────────────────────────────
-FROM gcr.io/distroless/static-debian12:nonroot
+FROM gcr.io/distroless/static-debian13:nonroot
 
 # CA certs y tzdata incluidos en distroless/static
 WORKDIR /app
@@ -159,7 +159,11 @@ USER nonroot:nonroot
 ENTRYPOINT ["/app/api"]
 ```
 
-**Tamaño esperado:** ~10-15MB (vs ~1.6GB con imagen Rust completa)
+**Notas de versión:**
+- `cargo-chef 0.1.77` es la última estable (mar 2026).citeweb_search:23#0
+- `distroless/static-debian13` es la versión actual (2026). Debian 12 sigue disponible pero Debian 13 es la más reciente.citeweb_search:23#19
+- Tag `nonroot` ejecuta como usuario `nonroot` (uid 65532).
+- **Tamaño esperado:** ~10-15MB (vs ~1.6GB con imagen Rust completa)
 
 ---
 
@@ -168,18 +172,18 @@ ENTRYPOINT ["/app/api"]
 ```dockerfile
 # Ubicación: `infra/docker/frontend.Dockerfile`
 #
-# Descripción: Build de SvelteKit SSR con adapter-node. Runtime en Node 24.
+# Descripción: Build de SvelteKit SSR con adapter-node. Runtime en Node 26.
 #
 # ADRs: 0013, 0017
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Stage 1: Builder — build de SvelteKit
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:24-alpine AS builder
+FROM node:26.1.0-alpine AS builder
 WORKDIR /app
 
 # Instalar pnpm
-RUN npm install -g pnpm@11.0.0
+RUN npm install -g pnpm@11.1
 
 # Copiar dependencias primero (cache de layer)
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml ./
@@ -192,9 +196,9 @@ COPY . .
 RUN pnpm --filter web build
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Stage 2: Runtime — Node 24 alpine
+# Stage 2: Runtime — Node 26 alpine
 # ─────────────────────────────────────────────────────────────────────────────
-FROM node:24-alpine AS runtime
+FROM node:26.1.0-alpine AS runtime
 WORKDIR /app
 
 # Crear usuario no-root
@@ -217,6 +221,10 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=5s --retries=3     CMD no
 
 CMD ["node", "build"]
 ```
+
+**Notas de versión:**
+- Node 26.1.0 es la versión Current (may 2026). Para producción conservadora usar Node 24 LTS.
+- pnpm 11.1 es la última estable (may 2026). Requiere Node 22+.
 
 ---
 
@@ -499,13 +507,13 @@ Cada servicio:
 ### Superficie mínima
 
 * `postgres:17-alpine` — minimal
-* `gcr.io/distroless/static-debian12:nonroot` — sin shell, sin root
+* `gcr.io/distroless/static-debian13:nonroot` — sin shell, sin root
 * imágenes específicas
 * sin herramientas innecesarias
 
 ### Non-root
 
-* Backend: usuario `nonroot` (distroless)
+* Backend: usuario `nonroot` (distroless, uid 65532)
 * Frontend: usuario `sveltekit` (uid 1001)
 * PostgreSQL: usuario `postgres` (imagen oficial)
 
@@ -541,15 +549,21 @@ Configuración en Coolify:
 
 ## Herramientas y Librerías Recomendadas (Edición 2026)
 
-| Herramienta | Propósito |
-| -------------- | --------------------------------- |
-| `lazydocker` | TUI para administrar contenedores |
-| `ctop` | Monitoreo live de recursos Docker |
-| `watchtower` | Auto-update de imágenes |
-| `dive` | Analizar tamaño de imágenes |
-| `docker scout` | Escaneo de vulnerabilidades |
-| `cargo-chef` | Cachear dependencias Rust en Docker |
-| `distroless` | Imágenes mínimas sin shell |
+| Herramienta | Propósito | Versión |
+| -------------- | --------------------------------- | ------- |
+| `lazydocker` | TUI para administrar contenedores | **0.25.2** (nov 2024) |
+| `ctop` | Monitoreo live de recursos Docker | latest |
+| `watchtower` | Auto-update de imágenes | **1.5.3** (dic 2025) |
+| `dive` | Analizar tamaño de imágenes | latest |
+| `docker scout` | Escaneo de vulnerabilidades | **v1.18.3** (abr 2026) |
+| `cargo-chef` | Cachear dependencias Rust en Docker | **0.1.77** (mar 2026) |
+| `distroless` | Imágenes mínimas sin shell | Debian 13 (2026) |
+
+**Notas de versión:**
+- `lazydocker 0.25.2` es la última estable (nov 2024).citeweb_search:23#9
+- `watchtower 1.5.3` es la última estable (dic 2025).citeweb_search:23#4
+- `docker scout v1.18.3` es la última estable (abr 2026). Disponible como CLI plugin de Docker Desktop o standalone binary.citeweb_search:23#11
+- `cargo-chef 0.1.77` es la última estable (mar 2026). Pre-built images: `lukemathwalker/cargo-chef:<version>-rust-<rust-version>`.citeweb_search:23#0
 
 ---
 
@@ -608,9 +622,24 @@ Mitigación:
 * La persistencia se maneja con volúmenes Docker
 * El backend depende explícitamente de PostgreSQL (condition: healthy)
 * El frontend depende explícitamente del backend (condition: healthy)
-* Backend: multi-stage build con cargo-chef + distroless/static:nonroot
-* Frontend: multi-stage build con Node 24 alpine
+* Backend: multi-stage build con cargo-chef + distroless/static-debian13:nonroot
+* Frontend: multi-stage build con Node 26 alpine
 * Target de build: `x86_64-unknown-linux-musl` (static linking)
 * `.dockerignore` obligatorio en `infra/docker/`
 * `docker-compose.override.yml` para desarrollo local
 * Coolify lee `infra/docker/docker-compose.yml` para deploy
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **cargo-chef** | **0.1.77** | Última estable (mar 2026). Pre-built images: `lukemathwalker/cargo-chef:<version>-rust-<rust-version>`. Tag scheme: `0.1.77-rust-1.95`. |
+| **distroless** | **static-debian13** | Debian 13 es la versión actual (2026). Debian 12 sigue disponible. Tags: `latest`, `nonroot`, `debug`, `debug-nonroot`. |
+| **Node.js** | **26.1.0** (Current) / **24** LTS | Node 26.1.0 publicado 7 may 2026. Para producción conservadora usar Node 24 LTS. |
+| **pnpm** | **11.1** | Última estable (may 2026). Requiere Node 22+. |
+| **lazydocker** | **0.25.2** | Última estable (nov 2024). TUI para Docker. Go >= 1.19. |
+| **watchtower** | **1.5.3** | Última estable (dic 2025). Auto-update de imágenes Docker. |
+| **docker scout** | **v1.18.3** | Última estable (abr 2026). Escaneo de vulnerabilidades. CLI plugin de Docker Desktop o standalone binary. |
+| **PostgreSQL** | **17-alpine** | Última estable. Alpine variant minimal. |

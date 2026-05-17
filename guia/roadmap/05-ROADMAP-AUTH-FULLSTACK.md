@@ -44,7 +44,9 @@
     [ ] Rate limiting: max 5 intentos / 15min por IP (ADR 0009)
     [ ] Valida email: formato RFC 5322 + único (case-insensitive)
     [ ] Valida password: mínimo 12 caracteres, 1 mayúscula, 1 minúscula, 1 número, 1 símbolo
-    [ ] PasswordHasher::hash(argon2id, OWASP 2024 params)
+    [ ] PasswordHasher::hash(argon2id, OWASP 2025 params)
+        [ ] m=47104 (46 MiB), t=1, p=1 ← configuración recomendada OWASP 2025
+        [ ] O alternativa: m=19456 (19 MiB), t=2, p=1 ← mínimo aceptable
     [ ] Guarda user en DB con is_active = false (hasta verificación)
     [ ] Genera token de verificación (opaque, 32 bytes, SHA-256 hash en DB)
     [ ] Envía email de verificación vía Resend (ADR 0016)
@@ -57,7 +59,7 @@
     [ ] Email::new() valida formato
     [ ] find_active_by_email() → 409 si existe y no está soft-deleted
     [ ] find_soft_deleted_by_email() → 409 si fue eliminado (no reutilizar emails)
-    [ ] hash_password() con argon2id
+    [ ] hash_password() con argon2id (OWASP 2025)
     [ ] users.save() con is_active = false
     [ ] tokens.create_verification_token(user_id)
     [ ] audit.log()
@@ -73,7 +75,7 @@
     [ ] Campos: name, email, password, password_confirmation
     [ ] ArkType validation en tiempo real:
         [ ] email: formato válido
-        [ ] password: 12+ chars, fuerza visual (zxcvbn opcional)
+        [ ] password: 12+ chars, fuerza visual (zxcvbn-ts opcional)
         [ ] password_confirmation: coincide con password
     [ ] TanStack mutation → POST /auth/register
     [ ] onSuccess: toast "Revisa tu email para verificar" + redirect /login
@@ -367,8 +369,8 @@
     [ ] Recibe { "token": "...", "new_password": "..." }
     [ ] hash_token(raw) → buscar en tokens WHERE purpose = 'password_reset'
     [ ] Si no existe o expirado → 400 "Token inválido o expirado"
-    [ ] Validar new_password: 12+ chars, fuerza
-    [ ] hash_password(new_password) con argon2id
+    [ ] Validar new_password: 12+ chars, fuerza (zxcvbn-ts score ≥ 3)
+    [ ] hash_password(new_password) con argon2id (OWASP 2025)
     [ ] UPDATE users SET password_hash = $1 WHERE id = user_id
     [ ] DELETE tokens WHERE user_id = $1 AND purpose = 'password_reset'  ← invalidar todos los resets del user
     [ ] DELETE sessions WHERE user_id = $1  ← forzar re-login en todos los dispositivos
@@ -390,7 +392,7 @@
     [ ] Lee token desde URL query param: ?token=xxx
     [ ] Si no hay token → redirect /forgot-password
     [ ] Campos: new_password, confirm_password
-    [ ] Indicador de fuerza de password
+    [ ] Indicador de fuerza de password (zxcvbn-ts score 0-4)
     [ ] TanStack mutation → POST /auth/reset-password
     [ ] onSuccess: "Password actualizado" + redirect /login
     [ ] onError (400): "Link inválido o expirado" + botón para solicitar nuevo
@@ -468,7 +470,7 @@
     [ ] POST /auth/logout: 10 / 1min por IP
 
 [ ] Implementación:
-    [ ] Tower middleware: tower_governor o custom Redis/Moka based
+    [ ] Tower middleware: tower-governor o custom Redis/Moka based
     [ ] Key: IP address (X-Forwarded-For si detrás de proxy)
     [ ] Headers de respuesta:
         [ ] X-RateLimit-Limit
@@ -544,17 +546,33 @@ done
 
 | Síntoma | Causa probable | Solución |
 |---------|---------------|----------|
-| Login siempre 401 | Password hash incorrecto | Verificar argon2id params, verificar verify_password |
+| Login siempre 401 | Password hash incorrecto | Verificar argon2id params (OWASP 2025), verificar verify_password |
 | access_token empieza con "eyJ" | Usar PASETO, no JWT | Verificar PasetoService::generate, rechazar JWT en middleware |
 | Permisos no cargados | Login response no incluye permissions | Verificar backend incluye permissions[] en response |
 | RBAC no funciona | Cache Moka desincronizado | Invalidar cache al actualizar roles/permisos |
 | Refresh token reusado funciona | No se revocó el anterior | Verificar DELETE sessions en refresh handler |
-| Rate limiting no aplica | Middleware no configurado | Verificar Tower middleware en router |
+| Rate limiting no aplica | Middleware no configurado | Verificar Tower middleware (tower-governor) en router |
 | Email de verificación no llega | Resend no configurado | Verificar RESEND_API_KEY y MAIL_FROM en .env |
 | Password reset link no funciona | Token expirado o mal hasheado | Verificar hash_token() usa SHA-256 consistente |
 | Sesión no persiste entre tabs | localStorage no compartido | Verificar auth store usa localStorage (no sessionStorage) |
 | Auto-refresh no funciona | $effect no verifica expiry | Verificar lógica de refresh silencioso en auth.svelte.ts |
 | Logout en un tab no cierra otros | No se usa logout-all | Implementar logout-all + broadcast channel |
+| Password débil aceptado | zxcvbn-ts no configurado | Verificar score mínimo ≥ 3 en validación |
+| Argon2 lento en VPS | Parámetros demasiado altos | Usar configuración mínima OWASP: m=19456, t=2, p=1 |
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **argon2id** | OWASP 2025 | m=47104 (46 MiB), t=1, p=1 (recomendado) o m=19456 (19 MiB), t=2, p=1 (mínimo) |
+| **PASETO v4** | pasetors / paseto-rs | v4.local: XChaCha20 + BLAKE2b; v4.public: Ed25519 |
+| **Rate limiting** | tower-governor | Tower middleware con GCRA (Generic Cell Rate Algorithm) |
+| **Cache** | moka | Cache de permisos RBAC, TTL 5min |
+| **Email** | Resend | 3K emails/mes free, React Email integration, REST API |
+| **Subtle Crypto** | Web Crypto API | Disponible en todos los navegadores modernos (HTTPS requerido) |
+| **zxcvbn-ts** | zxcvbn-ts | Port TypeScript de zxcvbn (Dropbox) para estimar fuerza de password |
 
 ---
 

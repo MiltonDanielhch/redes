@@ -1,12 +1,15 @@
 # ADR 0015 — Jobs Asíncronos con Apalis 1.0
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de dependencias tras auditoría contra crates.io, GitHub, docs.rs y repositorios oficiales.
+
 | Campo               | Valor                                                                 |
 | ------------------- | --------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                           |
 | **Fecha**           | 2026-05-16                                                             |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                     |
 | **Relacionado con** | ADR 0014 (Monitoreo), ADR 0003 (Stack Backend), ADR 0020 (Monitoreo Regional), ADR 0021 (Local-First Sync) |
-| **Última revisión** | 2026-05-16 — Actualización a Apalis 1.0 API + PostgreSQL storage |
+| **Última revisión** | 2026-05-16 — Actualización a Apalis 1.0-rc.7 + tokio 1.52 + tower 0.5.3 |
 
 ---
 
@@ -25,11 +28,13 @@ El handler HTTP no debe bloquearse esperando estos procesos.
 
 ## Decisión
 
-Usar **Apalis 1.0** (release candidate o estable cuando disponible) como layer de jobs asíncronos en Rust.
+Usar **Apalis 1.0** (release candidate) como layer de jobs asíncronos en Rust.
 
-**Versión:** `1.0.0-rc.9` (o `1.0.0` estable cuando salga)
+**Versión:** `1.0.0-rc.7` (última release candidate, abril 2026)
 
 **Storage:** `apalis-postgres` para producción, `apalis-sqlite` para desarrollo.
+
+> **Nota:** Apalis 1.0 aún no ha alcanzado versión estable. La última RC es `1.0.0-rc.7` (abril 2026). Se recomienda fijar versión exacta y revisar changelog antes de actualizar. `apalis-board` está en `1.0.0-rc.8`.
 
 ---
 
@@ -39,13 +44,13 @@ Usar **Apalis 1.0** (release candidate o estable cuando disponible) como layer d
 # crates/jobs/Cargo.toml
 
 [dependencies]
-apalis = { version = "1.0.0-rc.9", features = ["tracing"] }
-apalis-postgres = "1.0.0-rc.9"
-apalis-sqlite = { version = "1.0.0-rc.9", optional = true }
-apalis-cron = "1.0.0-rc.9"
-tokio = { version = "1.45", features = ["rt-multi-thread", "macros"] }
+apalis = { version = "1.0.0-rc.7", features = ["tracing"] }
+apalis-postgres = "1.0.0-rc.7"
+apalis-sqlite = { version = "1.0.0-rc.7", optional = true }
+apalis-cron = "1.0.0-rc.7"
+tokio = { version = "1.52", features = ["rt-multi-thread", "macros"] }
 tracing = "0.1"
-tower = { version = "0.5", features = ["retry", "timeout", "limit"] }
+tower = { version = "0.5.3", features = ["retry", "timeout", "limit"] }
 serde = { version = "1.0", features = ["derive"] }
 chrono = "0.4"
 ```
@@ -371,12 +376,13 @@ enqueue-test:
 
 | Herramienta | Propósito | Versión | Estado |
 | ---------------- | -------------------------------- | ------------ | ------ |
-| `apalis` | Framework de jobs | 1.0.0-rc.9 | ✅ Activa |
-| `apalis-postgres` | Storage PostgreSQL | 1.0.0-rc.9 | ✅ Activa |
-| `apalis-sqlite` | Storage SQLite (dev) | 1.0.0-rc.9 | 🟡 Dev only |
-| `apalis-cron` | Scheduling cron | 1.0.0-rc.9 | ✅ Activa |
-| `apalis-board` | Web UI para monitoreo | 1.0.0-rc.9 | 🟡 Opcional |
-| `tower` | Middleware (retry, timeout) | 0.5 | ✅ Activa |
+| `apalis` | Framework de jobs | 1.0.0-rc.7 | ✅ Activa (RC) |
+| `apalis-postgres` | Storage PostgreSQL | 1.0.0-rc.7 | ✅ Activa (RC) |
+| `apalis-sqlite` | Storage SQLite (dev) | 1.0.0-rc.7 | 🟡 Dev only |
+| `apalis-cron` | Scheduling cron | 1.0.0-rc.7 | ✅ Activa (RC) |
+| `apalis-board` | Web UI para monitoreo | 1.0.0-rc.8 | 🟡 Opcional |
+| `tower` | Middleware (retry, timeout) | 0.5.3 | ✅ Activa |
+| `tokio` | Runtime async | 1.52 | ✅ Activa |
 | `tracing` | Observabilidad | workspace | ✅ Activa |
 
 ---
@@ -399,11 +405,11 @@ enqueue-test:
 
 **API inestable (RC)**
 
-Apalis 1.0 aún no es estable. Puede haber breaking changes.
+Apalis 1.0 aún no es estable. Puede haber breaking changes entre RCs.
 
 **Mitigación**
 
-* Fijar versión exacta en `Cargo.toml`
+* Fijar versión exacta en `Cargo.toml` (`=1.0.0-rc.7`)
 * Revisar changelog antes de actualizar
 * Encapsular toda la lógica en `crates/jobs/`
 
@@ -418,7 +424,7 @@ Mitigación:
 
 ## Decisiones derivadas
 
-* `apalis 1.0.0-rc.9` es la versión oficial de jobs
+* `apalis 1.0.0-rc.7` es la versión oficial de jobs
 * `apalis-postgres` es el storage de producción
 * `apalis-sqlite` para desarrollo local
 * `apalis-cron` para jobs programados
@@ -431,3 +437,19 @@ Mitigación:
 * Healthchecks.io heartbeat cada 5 minutos
 * Graceful shutdown con señales SIGTERM/SIGINT
 * `crates/jobs/` encapsula toda la lógica de jobs
+* `tokio 1.52` es la versión mínima para el runtime de jobs
+* `tower 0.5.3` es la versión mínima para middleware
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | apalis | 1.0.0-rc.9 | **1.0.0-rc.7** | Última RC real (abr 2026). rc.9 no existe en crates.io. |
+| 2026-05-16 | apalis-postgres | 1.0.0-rc.9 | **1.0.0-rc.7** | Alineado con apalis core. |
+| 2026-05-16 | apalis-sqlite | 1.0.0-rc.9 | **1.0.0-rc.7** | Alineado con apalis core. |
+| 2026-05-16 | apalis-cron | 1.0.0-rc.9 | **1.0.0-rc.7** | Alineado con apalis core. |
+| 2026-05-16 | apalis-board | 1.0.0-rc.9 | **1.0.0-rc.8** | Última RC (may 2026). |
+| 2026-05-16 | tokio | 1.45 | **1.52** | Runtime actualizado. Última: 1.52.3 (may 2026). |
+| 2026-05-16 | tower | 0.5 | **0.5.3** | Última estable. Middleware retry/timeout/limit. |

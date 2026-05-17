@@ -5,7 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                                               |
 | **Fecha**           | 2026-05-16                                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                         |
-| **Versión**         | 2.0 (Corrección 2026)                                                                                                    |
+| **Versión**         | 2.1 (Corrección 2026-05-16)                                                                                              |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0008 (PASETO Auth), ADR 0010 (Testing), ADR 0015 (Jobs), ADR 0020 (Monitoreo Regional) |
 
 ---
@@ -38,12 +38,12 @@ Necesitamos una solución que:
 
 Usar:
 
-* **Utoipa v5** para generación automática de OpenAPI
-* **Scalar v0.3** como interfaz visual moderna
+* **Utoipa v5.5.0** para generación automática de OpenAPI
+* **Scalar v0.3.0** como interfaz visual moderna
 * `/openapi.json` como contrato oficial IA-ready
 * Macros exclusivamente en infraestructura
 * **`time` feature** (no `chrono`) para consistencia con el stack del proyecto
-* **`openapi-typescript`** (no `openapi-typescript-codegen`) para generación de tipos frontend
+* **`openapi-typescript@7.13.0`** (no `openapi-typescript-codegen`) para generación de tipos frontend
 
 La arquitectura sigue:
 
@@ -81,7 +81,7 @@ Scalar UI / IA / Frontend codegen
 
 [dependencies]
 utoipa = {
-    version = "5",
+    version = "5.5.0",
     features = [
         "axum_extras",
         "uuid",
@@ -90,15 +90,22 @@ utoipa = {
 }
 
 utoipa-scalar = {
-    version = "0.3",
+    version = "0.3.0",
     features = ["axum"]
 }
 
-# Opcional: bindings nativos Axum para Utoipa v5
-utoipa-axum = "0.2"
+# Bindings nativos Axum para Utoipa v5 (Axum 0.8 compatible)
+utoipa-axum = "0.2.0"
+
+# Axum subyacente (implícito, no requerido explícitamente)
+# axum = "0.8.9"
 ```
 
-**Nota de versión (2026):** El proyecto utiliza `time` (no `chrono`) en todo el dominio y las entidades (ADR 0002, ADR 0020). Utoipa v5 soporta `time` nativamente vía feature flag. Se elimina `chrono` para evitar dependencias duplicadas.
+**Nota de versión (2026-05-16):**
+- `utoipa` actualizado a **5.5.0** (latest estable al 2026-05-05). Incluye soporte para `jiff v0.2`, mejoras en `HashMap`/`HashSet` con hashers personalizados y reemplazo de `serde_yaml` por `serde_norway`.
+- `utoipa-scalar` actualizado a **0.3.0** (latest estable al 2026-04-21).
+- `utoipa-axum` se mantiene en **0.2.0** (latest estable al 2026-01-16). Diseñado para Axum 0.8.x (última estable: 0.8.9 al 2026-04-14).
+- El proyecto utiliza `time` (no `chrono`) en todo el dominio y las entidades (ADR 0002, ADR 0020). Utoipa v5 soporta `time` nativamente vía feature flag.
 
 ---
 
@@ -485,11 +492,11 @@ El archivo `/openapi.json` permite:
 ## Generación automática de tipos TypeScript
 
 ```bash id="m4f1dz"
-pnpm add -D openapi-typescript
+pnpm add -D openapi-typescript@7.13.0
 ```
 
 ```bash id="0n1d7z"
-npx openapi-typescript   http://localhost:8080/openapi.json   --output apps/web/src/lib/generated/api-types.ts
+npx openapi-typescript@7.13.0   http://localhost:8080/openapi.json   --output apps/web/src/lib/generated/api-types.ts
 ```
 
 Resultado:
@@ -499,7 +506,9 @@ apps/web/src/lib/generated/
  └─ api-types.ts    # Tipos TypeScript puros, sin runtime overhead
 ```
 
-**Nota (2026):** Se utiliza `openapi-typescript` en lugar de `openapi-typescript-codegen`. Esta herramienta genera tipos TypeScript puros (interfaces y tipos) sin clases de runtime ni dependencias de cliente, lo cual es ideal para integrarse con TanStack Query, Svelte 5 Runes y `fetch` nativo en el frontend (ADR 0017).
+**Nota (2026-05-16):** Se utiliza `openapi-typescript@7.13.0` en lugar de `openapi-typescript-codegen`. Esta herramienta genera tipos TypeScript puros (interfaces y tipos) sin clases de runtime ni dependencias de cliente, lo cual es ideal para integrarse con TanStack Query, Svelte 5 Runes y `fetch` nativo en el frontend (ADR 0017).
+
+**Atención:** `openapi-typescript` planea la versión 8.0 para 2026 con soporte OpenAPI 3.2 y mejoras de interoperabilidad. Monitorear changelog antes de actualizar major.
 
 ---
 
@@ -516,7 +525,7 @@ apps/web/src/lib/generated/
     curl -f http://localhost:8080/openapi.json
 
 - name: Lint OpenAPI
-  run: npx @stoplight/spectral-cli lint openapi.json
+  run: npx @stoplight/spectral-cli@6.15.1 lint openapi.json
 ```
 
 ---
@@ -524,11 +533,11 @@ apps/web/src/lib/generated/
 # Spectral — Validación OpenAPI
 
 ```bash id="8p1pcu"
-pnpm add -D @stoplight/spectral-cli
+pnpm add -D @stoplight/spectral-cli@6.15.1
 ```
 
 ```bash id="w7p7ry"
-npx spectral lint openapi.json
+npx @stoplight/spectral-cli@6.15.1 lint openapi.json
 ```
 
 Permite validar:
@@ -554,23 +563,25 @@ Permite validar:
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+# Herramientas y Librerías para Optimizar (Edición 2026-05-16)
 
-| Herramienta                      | Propósito                          |
-| -------------------------------- | ---------------------------------- |
-| **`utoipa`**                     | Generación automática del spec     |
-| **`utoipa-scalar`**              | Interfaz visual moderna            |
-| **`utoipa-axum`**                | Bindings nativos Axum para Utoipa  |
-| **`openapi-typescript`**         | Tipos TypeScript puros desde OpenAPI |
-| **`@stoplight/spectral-cli`**    | Linter OpenAPI                     |
-| **`cargo-udeps`**                | Detectar dependencias innecesarias |
+| Herramienta                      | Versión fijada | Propósito                          |
+| -------------------------------- | -------------- | ---------------------------------- |
+| **`utoipa`**                     | `5.5.0`        | Generación automática del spec     |
+| **`utoipa-scalar`**              | `0.3.0`        | Interfaz visual moderna            |
+| **`utoipa-axum`**                | `0.2.0`        | Bindings nativos Axum para Utoipa  |
+| **`openapi-typescript`**         | `7.13.0`       | Tipos TypeScript puros desde OpenAPI |
+| **`@stoplight/spectral-cli`**    | `6.15.1`       | Linter OpenAPI                     |
+| **`cargo-udeps`**                | latest         | Detectar dependencias innecesarias |
 
-**Cambios respecto a v1.0:**
-- `utoipa` actualizado a v5 (estable 2026)
-- `utoipa-scalar` actualizado a v0.3 (estable 2026)
-- Se agrega `utoipa-axum` v0.2 para bindings nativos con Axum 0.8
-- `openapi-typescript` reemplaza a `openapi-typescript-codegen` (más ligero, sin runtime)
+**Cambios respecto a v2.0:**
+- `utoipa` actualizado de `5` (genérico) a `5.5.0` (patch específica, 2026-05-05)
+- `utoipa-scalar` actualizado de `0.3` a `0.3.0` (patch específica, 2026-04-21)
+- `utoipa-axum` explicitado como `0.2.0` (compatible con Axum 0.8.9)
+- `openapi-typescript` fijado a `7.13.0` (latest estable, 2026-02-11)
+- `@stoplight/spectral-cli` fijado a `6.15.1` (latest estable, ~2026-04)
 - Se elimina `chrono` de las features; se usa `time` (consistencia con ADR 0002 y ADR 0020)
+- Se agrega nota de monitoreo sobre `openapi-typescript` v8.0 planificada
 
 ---
 
@@ -682,9 +693,9 @@ Exponer endpoints internos accidentalmente.
 * `/docs` solo en development/staging
 * `/openapi.json` disponible siempre
 * PASETO se documenta explícitamente
-* El frontend genera tipos desde OpenAPI con `openapi-typescript`
+* El frontend genera tipos desde OpenAPI con `openapi-typescript@7.13.0`
 * Las macros viven solo en infraestructura
-* `spectral lint` corre en CI
+* `spectral lint` corre en CI usando `@stoplight/spectral-cli@6.15.1`
 * `openapi.json` es parte del contrato oficial del sistema
 * Los tags de monitoreo (`sedes`, `devices`, `metrics`, `alerts`, `topology`, `intrusions`, `agents`) son de primer nivel en el spec
 
@@ -696,3 +707,4 @@ Exponer endpoints internos accidentalmente.
 | ------- | ----------- | ------------------ |
 | 1.0     | 2026 (orig) | Versión inicial con utoipa v4, chrono, openapi-typescript-codegen |
 | 2.0     | 2026-05-16  | Actualiza a utoipa v5, utoipa-scalar v0.3; reemplaza chrono por time; reemplaza openapi-typescript-codegen por openapi-typescript; agrega tags de monitoreo ADR 0020; agrega utoipa-axum v0.2 |
+| 2.1     | 2026-05-16  | Fija versiones exactas: utoipa 5.5.0, utoipa-scalar 0.3.0, utoipa-axum 0.2.0, openapi-typescript 7.13.0, spectral-cli 6.15.1; compatibilidad verificada con Axum 0.8.9; nota sobre openapi-typescript v8.0 planificada |

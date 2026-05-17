@@ -5,6 +5,7 @@
 | **Estado**          | ✅ Aceptado                                                                                                                                             |
 | **Fecha**           | 2026-05-16                                                                                                                                             |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                                                                       |
+| **Versión**         | 2.1 (Corrección 2026-05-16)                                                                                                                            |
 | **Relacionado con** | ADR 0001 (Arquitectura Hexagonal), ADR 0003 (Axum), ADR 0004 (PostgreSQL), ADR 0006 (RBAC), ADR 0008 (PASETO), ADR 0015 (Jobs Apalis), ADR 0017 (Frontend SvelteKit), ADR 0021 (Local-First Sync Offline), ADR 0022 (Agentes Monitoreo Distribuidos) |
 
 ---
@@ -459,15 +460,15 @@ pub struct DeviceWhitelist {
 
 ## Stack
 
-| Tecnología     | Uso                 |
-| -------------- | ------------------- |
-| SvelteKit      | Dashboard SSR       |
-| Svelte 5 Runes | Reactividad         |
-| LayerChart     | Gráficos            |
-| SSE            | Realtime            |
-| TailwindCSS    | UI                  |
-| TanStack Query | Caching de datos    |
-| ArkType        | Validación runtime  |
+| Tecnología     | Uso                 | Versión referencia |
+| -------------- | ------------------- | ------------------ |
+| SvelteKit      | Dashboard SSR       | 2.x (latest)       |
+| Svelte 5 Runes | Reactividad         | 5.x (latest)       |
+| LayerChart     | Gráficos            | latest             |
+| SSE            | Realtime            | nativo (EventSource) |
+| TailwindCSS    | UI                  | 4.x                |
+| TanStack Query | Caching de datos    | 5.x                |
+| ArkType        | Validación runtime  | 2.x                |
 
 **Nota:** La comunicación frontend-backend es REST (JSON) + SSE para realtime. OpenAPI/Utoipa (ADR 0016) genera la documentación de la API. No se usa ConnectRPC ni gRPC.
 
@@ -530,14 +531,14 @@ user_roles
 
 # Estrategia de almacenamiento
 
-| Tipo de dato      | Estrategia             |
-| ----------------- | ---------------------- |
-| Inventario        | Persistente (PostgreSQL) |
-| Métricas realtime | Time-series (PostgreSQL) |
-| Alertas           | Persistente (PostgreSQL) |
-| Logs              | Retención configurable (PostgreSQL) |
-| Cache frontend    | SQLite Wasm (Local-First) |
-| Sync queue        | IndexedDB (browser) |
+| Tipo de dato      | Estrategia             | Tecnología |
+| ----------------- | ---------------------- | ---------- |
+| Inventario        | Persistente (PostgreSQL) | PostgreSQL 17+ |
+| Métricas realtime | Time-series (PostgreSQL) | PostgreSQL 17+ |
+| Alertas           | Persistente (PostgreSQL) | PostgreSQL 17+ |
+| Logs              | Retención configurable (PostgreSQL) | PostgreSQL 17+ |
+| Cache frontend    | SQLite Wasm (Local-First) | sqlite-wasm |
+| Sync queue        | IndexedDB (browser)    | browser API |
 
 ---
 
@@ -682,22 +683,37 @@ timestamp
 
 ---
 
-# Herramientas y Librerías para Optimizar (Edición 2026)
+# Herramientas y Librerías para Optimizar (Edición 2026-05-16)
 
-| Herramienta  | Propósito                 | Crate/Package |
-| ------------ | ------------------------- | ------------- |
-| `snmp`       | Recolección SNMP          | crates/snmp |
-| `surge-ping` | ICMP async                | crates/snmp |
-| `tokio`      | Concurrencia async        | workspace |
-| `Apalis`     | Procesamiento background  | crates/jobs |
-| `SSE`        | Streaming eficiente       | apps/api |
-| `tracing`    | Observabilidad            | workspace |
-| `sentry`     | Monitoreo de errores      | apps/api |
-| `LayerChart` | Visualización realtime    | apps/web |
-| `sqlx`       | PostgreSQL queries        | crates/database |
-| `pasetors`   | PASETO v4 tokens          | crates/auth |
-| `argon2`     | Password hashing          | crates/auth |
-| `utoipa`     | OpenAPI generation        | crates/infrastructure |
+| Herramienta  | Propósito                 | Crate/Package | Versión fijada |
+| ------------ | ------------------------- | ------------- | -------------- |
+| `async-snmp` | Recolección SNMP async    | crates/snmp   | `0.12.0`       |
+| `surge-ping` | ICMP async                | crates/snmp   | `0.8.4`        |
+| `tokio`      | Concurrencia async        | workspace     | `1.51` (LTS)   |
+| `Apalis`     | Procesamiento background  | crates/jobs   | `1.0.0-rc.9`   |
+| `SSE`        | Streaming eficiente       | apps/api      | nativo Axum    |
+| `tracing`    | Observabilidad            | workspace     | `0.1.44`       |
+| `sentry`     | Monitoreo de errores      | apps/api      | `0.47.0`       |
+| `LayerChart` | Visualización realtime    | apps/web      | latest         |
+| `sqlx`       | PostgreSQL queries        | crates/database | `0.8.6`      |
+| `pasetors`   | PASETO v4 tokens          | crates/auth   | `0.7.8`        |
+| `argon2`     | Password hashing          | crates/auth   | `0.5.3`        |
+| `utoipa`     | OpenAPI generation        | crates/infrastructure | `5.5.0` |
+
+**Cambios respecto a v2.0:**
+- Se fijan versiones exactas de todas las dependencias del módulo basadas en latest estable al 2026-05-16
+- `async-snmp` 0.12.0 (abr 2026) — async-first SNMP client; requiere Rust 1.88+ (compatible con Rust 1.95.0 del Containerfile, ADR 0019)
+- `surge-ping` 0.8.4 (mar 2026) — ICMP async con tokio
+- `tokio` 1.51 (LTS hasta marzo 2027, MSRV 1.70)
+- `tracing` 0.1.44 (dic 2025)
+- `sentry` 0.47.0 (mar 2026, MSRV 1.88.0)
+- `sqlx` 0.8.6 (feb 2026, current stable según referencias 2026; alpha 0.9.0 en desarrollo)
+- `pasetors` 0.7.8 (feb 2026)
+- `argon2` (RustCrypto) 0.5.3 — pure Rust Argon2id
+- `utoipa` 5.5.0 (may 2026)
+- `Apalis` 1.0.0-rc.9 (release candidate, estable para uso previsto en ADR 0015)
+- Se elimina ambigüedad de `snmp` como crate genérico; se especifica `async-snmp` como dependencia oficial
+- Se agregan versiones de referencia para el stack frontend (SvelteKit 2.x, Svelte 5.x, TailwindCSS 4.x, TanStack Query 5.x, ArkType 2.x)
 
 ---
 
@@ -769,3 +785,21 @@ ARP/SNMP pueden no detectar todos los casos.
 * **PASETO v4 es el único método de autenticación** — JWT prohibido (ADR 0008)
 * **Rate limiting en todos los endpoints de auth** — protección contra brute force (ADR 0009)
 * **Soft delete en todas las entidades persistentes** — nunca DELETE físico (ADR 0006)
+* **async-snmp 0.12.0** es el crate oficial para recolección SNMP — requiere Rust 1.88+ (satisfecho por Rust 1.95.0)
+* **surge-ping 0.8.4** es el crate oficial para ICMP async
+* **sqlx 0.8.6** para queries PostgreSQL — verificar compatibilidad con `time` crate (feature `time` activada)
+* **sentry 0.47.0** para monitoreo de errores en producción
+* **tracing 0.1.44** para observabilidad estructurada en todo el workspace
+* **pasetors 0.7.8** para tokens PASETO v4.local
+* **argon2 0.5.3** (RustCrypto) para hashing de passwords
+* **utoipa 5.5.0** para generación automática de OpenAPI del módulo de monitoreo
+
+---
+
+# Historial de cambios
+
+| Versión | Fecha       | Cambios realizados |
+| ------- | ----------- | ------------------ |
+| 1.0     | 2026 (orig) | Versión inicial del módulo de monitoreo |
+| 2.0     | 2026-05-16  | Revisión general de estructura, adición de Local-First, agentes distribuidos, stack frontend especificado |
+| 2.1     | 2026-05-16  | Fija versiones exactas de dependencias: async-snmp 0.12.0, surge-ping 0.8.4, tokio 1.51 (LTS), tracing 0.1.44, sentry 0.47.0, sqlx 0.8.6, pasetors 0.7.8, argon2 0.5.3, utoipa 5.5.0, Apalis 1.0.0-rc.9; especifica crate SNMP oficial; agrega versiones frontend de referencia |

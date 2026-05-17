@@ -1,5 +1,8 @@
 # ADR 0011 — Estándares de Desarrollo: Ciclo Lab → Puente → Producción
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de herramientas tras auditoría contra crates.io, GitHub y docs.rs.
+
 | Campo               | Valor                                                                                                                    |
 | ------------------- | ------------------------------------------------------------------------------------------------------------------------ |
 | **Estado**          | ✅ Aceptado                                                                                                               |
@@ -145,16 +148,16 @@ antes de commit.
 | ------------- | ------------------------ | --------------- | ------ |
 | `bacon`       | feedback en tiempo real  | 3.22.0          | ✅ Activa |
 | `cargo-watch` | recompilación automática | 8.5.3           | 🟡 Legacy — usar `bacon` |
-| `just`        | comandos reproducibles   | 1.40            | ✅ Activa |
+| `just`        | comandos reproducibles   | 1.51.0          | ✅ Activa |
 | `nextest`     | tests paralelos          | 0.9.135         | ✅ Activa |
 | `clippy`      | linting estricto         | (via toolchain) | ✅ Activa |
-| `typos`       | corrección ortográfica   | 1.46.1          | ✅ Activa |
-| `cargo-deny`  | auditoría dependencias   | 0.18            | ✅ Activa |
-| `cargo-audit` | vulnerabilidades         | 0.21            | ✅ Activa |
+| `typos`       | corrección ortográfica   | 1.46.2          | ✅ Activa |
+| `cargo-deny`  | auditoría dependencias   | 0.19.6          | ✅ Activa |
+| `cargo-audit` | vulnerabilidades         | 0.22.1          | ✅ Activa |
 
 **Notas:**
 - `bacon` reemplaza a `cargo-watch` — mejor UX y soporte Rust 2024
-- `cargo-mutants` requiere Rust 1.88+ — **postergado hasta actualizar toolchain**
+- `cargo-mutants` requiere Rust 1.88+ — **ya disponible** (toolchain actual: 1.95.0)
 - `cargo-llvm-cov` opcional para cobertura visual
 
 ---
@@ -447,14 +450,14 @@ Quedan despriorizados:
 | ------------------ | --------------------------- | --------------- | ------ |
 | `bacon`            | Feedback loop ultra-rápido  | 3.22.0          | ✅ Activa |
 | `cargo-nextest`    | Testing paralelo            | 0.9.135         | ✅ Activa |
-| `cargo-deny`       | Auditoría de supply chain   | 0.18            | ✅ Activa |
-| `cargo-audit`      | Vulnerabilidades conocidas  | 0.21            | ✅ Activa |
-| `cargo-llvm-cov`   | Cobertura                   | 0.6.16          | 🟡 Opcional |
-| `cargo-mutants`    | Mutation testing            | 27.0.0          | ⏳ Requiere Rust 1.88+ |
-| `typos`            | Calidad textual             | 1.46.1          | ✅ Activa |
+| `cargo-deny`       | Auditoría de supply chain   | 0.19.6          | ✅ Activa |
+| `cargo-audit`      | Vulnerabilidades conocidas  | 0.22.1          | ✅ Activa |
+| `cargo-llvm-cov`   | Cobertura                   | 0.8.7           | 🟡 Opcional |
+| `cargo-mutants`    | Mutation testing            | 27.0.0          | ✅ Disponible (MSRV 1.88) |
+| `typos`            | Calidad textual             | 1.46.2          | ✅ Activa |
 | `clippy::pedantic` | Lints avanzados             | (toolchain)     | ✅ Activa |
-| `just`             | Automatización reproducible | 1.40            | ✅ Activa |
-| `lefthook`         | Enforcement local           | 1.11            | ✅ Activa |
+| `just`             | Automatización reproducible | 1.51.0          | ✅ Activa |
+| `lefthook`         | Enforcement local           | 2.1.6           | ✅ Activa |
 | `tracing`          | Observabilidad estructurada | (workspace)     | ✅ Activa |
 
 ---
@@ -516,4 +519,19 @@ Mitigación:
 * La simplicidad operacional tiene prioridad sobre escalabilidad prematura
 * Todo componente nuevo debe justificar su existencia arquitectónica
 * `bacon` es la herramienta oficial de feedback loop (reemplaza `cargo-watch`)
-* `cargo-mutants` se habilita cuando el toolchain alcance Rust 1.88+
+* `cargo-mutants` ya está disponible para el toolchain actual (Rust 1.95.0)
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | just | 1.40 | **1.51.0** | Nuevas funciones: módulos, `[no-cd]`, path functions |
+| 2026-05-16 | nextest | 0.9 | **0.9.135** | Runner de tests actualizado |
+| 2026-05-16 | typos | 1.46.1 | **1.46.2** | Última estable (16 may 2026). Fix: no corrige a `criterias` ni `replaceables` |
+| 2026-05-16 | cargo-deny | 0.18 | **0.19.6** | Fix de segfault (0.19.5), fix de advisory parsing (0.19.4), SARIF fixes (0.19.2) |
+| 2026-05-16 | cargo-audit | 0.21 | **0.22.1** | Última estable (feb 2026). MSRV 1.85.0 |
+| 2026-05-16 | cargo-llvm-cov | 0.6.16 | **0.8.7** | Salto de versión major. Requiere Rust ≥ 1.95.0 |
+| 2026-05-16 | cargo-mutants | 27.0.0 (postergado) | **27.0.0** | Ya disponible. MSRV 1.88 (cubierto por toolchain 1.95.0) |
+| 2026-05-16 | lefthook | 1.11 | **2.1.6** | Salto a v2. Fixes de packaging, normalización de paths, soporte git debug |

@@ -1,12 +1,15 @@
 # ADR 0012 — Herramientas: mise + just + pnpm + lefthook
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de herramientas tras auditoría contra crates.io, GitHub, nodejs.org y docs.rs.
+
 | Campo               | Valor                                                                                                    |
 | ------------------- | -------------------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                                               |
 | **Fecha**           | 2026-05-16                                                                                               |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                                         |
 | **Relacionado con** | ADR 0010 (Testing), ADR 0011 (Estándares de Desarrollo), ADR 0013 (Deploy), ADR 0016 (OpenAPI), ADR 0019 (Coolify) |
-| **Última revisión** | 2026-05-16 — Alineación con mise + pnpm 11 + Coolify |
+| **Última revisión** | 2026-05-16 — Alineación con mise 2026.5 + pnpm 10 + Node 26 + Coolify |
 
 ---
 
@@ -43,9 +46,9 @@ Se adopan oficialmente:
 
 | Herramienta | Rol | Versión mínima |
 | ----------- | --------------------------------- | --------------- |
-| `mise` | Gestor de toolchains (Rust, Node, pnpm, just) | 2026.x |
-| `just` | Task runner universal | 1.40 |
-| `pnpm` | Gestión de paquetes JS | 11.0 |
+| `mise` | Gestor de toolchains (Rust, Node, pnpm, just) | 2026.5 |
+| `just` | Task runner universal | 1.51.0 |
+| `pnpm` | Gestión de paquetes JS | 10.27 |
 | `lefthook` | Git hooks rápidos y reproducibles | 2.1.6 |
 
 ---
@@ -59,14 +62,16 @@ Se adopan oficialmente:
 - pnpm
 - just
 
+> **Nota:** mise usa versionado por fecha (`v2026.5.9` publicado 15 may 2026). Se recomienda usar `mise use mise@latest` o seguir la serie `2026.5.x`.
+
 ### Configuración (`mise.toml`)
 
 ```toml
 [tools]
-rust = "1.86"
-node = "24"
-pnpm = "11"
-just = "1.40"
+rust = "1.95"
+node = "26"
+pnpm = "10"
+just = "1.51"
 
 [env]
 RUST_LOG = "info"
@@ -216,9 +221,6 @@ audit:
     cargo deny check
     cargo audit
 
-typos:
-    typos .
-
 quality:
     just fmt
     just lint
@@ -326,7 +328,9 @@ clean:
 * es más rápido
 * tiene workspaces reales
 * evita duplicación masiva de node_modules
-* supply-chain protection por defecto (pnpm 11)
+* supply-chain protection por defecto (pnpm 10)
+
+> **Nota:** pnpm 10.27.0 es la última estable (diciembre 2025). Node.js 26 (mayo 2026) es la versión Current. Node.js 24 (Krypton) es la LTS estable recomendada para producción.
 
 ---
 
@@ -337,7 +341,7 @@ clean:
 packages:
   - "apps/web"
 
-# pnpm 11: configuración en pnpm-workspace.yaml, no .npmrc
+# pnpm 10: configuración en pnpm-workspace.yaml, no .npmrc
 ```
 
 ---
@@ -347,9 +351,9 @@ packages:
 ```json
 {
   "name": "@redes/web",
-  "packageManager": "pnpm@11.0.0",
+  "packageManager": "pnpm@10.27.0",
   "engines": {
-    "node": ">=24.0.0"
+    "node": ">=26.0.0"
   }
 }
 ```
@@ -524,16 +528,16 @@ Nunca tener:
 
 | Herramienta | Propósito | Versión | Estado |
 | ---------------- | ---------------------- | -------- | ------ |
-| `mise` | gestión de toolchains | 2026.x | ✅ Activa |
-| `just` | task runner | 1.40 | ✅ Activa |
-| `pnpm` | package manager JS | 11.0 | ✅ Activa |
+| `mise` | gestión de toolchains | 2026.5 | ✅ Activa |
+| `just` | task runner | 1.51.0 | ✅ Activa |
+| `pnpm` | package manager JS | 10.27 | ✅ Activa |
 | `lefthook` | git hooks | 2.1.6 | ✅ Activa |
 | `bacon` | feedback loop | 3.22.0 | ✅ Activa |
 | `cargo-nextest` | tests paralelos | 0.9.135 | ✅ Activa |
-| `cargo-deny` | auditoría supply-chain | 0.18 | ✅ Activa |
-| `cargo-audit` | CVEs | 0.21 | ✅ Activa |
-| `typos` | calidad textual | 1.46.1 | ✅ Activa |
-| `sqlx-cli` | migraciones | 0.8 | ✅ Activa |
+| `cargo-deny` | auditoría supply-chain | 0.19.6 | ✅ Activa |
+| `cargo-audit` | CVEs | 0.22.1 | ✅ Activa |
+| `typos` | calidad textual | 1.46.2 | ✅ Activa |
+| `sqlx-cli` | migraciones | 0.8.6 | ✅ Activa |
 | `openapi-typescript` | tipos TS desde OpenAPI | latest | ✅ Activa |
 
 ---
@@ -588,10 +592,28 @@ Mitigación:
 * `mise` es el gestor de toolchains oficial (reemplaza asdf/nvm)
 * `just` es el entrypoint oficial del proyecto
 * Todo workflow recurrente debe vivir en `justfile`
-* `pnpm` 11 es obligatorio — no usar npm/yarn/pnpm 10
+* `pnpm` 10.27 es obligatorio — no usar npm/yarn/pnpm 9
 * `lefthook install` forma parte de `just setup`
 * `just deploy` ejecuta validaciones antes de desplegar (Coolify)
 * El CI ejecuta exactamente los mismos comandos locales
 * El tooling prioriza simplicidad operacional sobre flexibilidad excesiva
 * `cargo-edit` eliminado (no se usa en el proyecto)
 * `cargo-watch` eliminado (reemplazado por `bacon`)
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | mise | 2026.x (genérico) | **2026.5** | Última: v2026.5.9 (15 may). Versionado por fecha. |
+| 2026-05-16 | just | 1.40 | **1.51.0** | Nuevas funciones: módulos, `[no-cd]`, path functions |
+| 2026-05-16 | pnpm | 11.0 | **10.27** | Última estable (dic 2025). Node.js 26 es Current; 24 es LTS. |
+| 2026-05-16 | Node.js | 24 | **26** | Node 26 Current (may 2026). Node 24 LTS estable para prod. |
+| 2026-05-16 | lefthook | 2.1.6 | **2.1.6** | Sin cambios. Versión vigente. |
+| 2026-05-16 | bacon | 3.22.0 | **3.22.0** | Sin cambios. Versión vigente. |
+| 2026-05-16 | cargo-nextest | 0.9 | **0.9.135** | Runner de tests actualizado |
+| 2026-05-16 | cargo-deny | 0.18 | **0.19.6** | Fix de segfault (0.19.5), advisory parsing (0.19.4) |
+| 2026-05-16 | cargo-audit | 0.21 | **0.22.1** | Última estable (feb 2026). MSRV 1.85.0 |
+| 2026-05-16 | typos | 1.46.1 | **1.46.2** | Última estable (16 may 2026) |
+| 2026-05-16 | sqlx-cli | 0.8 | **0.8.6** | Patch release con fixes |

@@ -46,14 +46,16 @@ La estrategia se divide en:
 ```toml
 # apps/api/Cargo.toml
 
-tower-governor = { version = "0.3", features = ["axum", "tracing"] }
-axum-client-ip = "1.3"
+# Middleware Tower para rate limiting con GCRA
+tower-governor = { version = "0.8.0", features = ["tracing"] }
+# Extracción segura de IP real detrás de proxies
+axum-client-ip = "1.3.1"
 ```
 
 **Notas de versión:**
-- `tower-governor 0.3.0` es la última estable disponible (mayo 2025). No existe versión 0.4.
-- `axum-client-ip 1.3.1` requiere Axum 0.7+. Compatible con Axum 0.8 del proyecto.
-- En `axum-client-ip 1.x`, `SecureClientIp` se renombró a `ClientIp` y `SecureClientIpSource` a `ClientIpSource`.
+- `tower-governor 0.8.0` es la última estable (ago 2025). Requiere Tower 0.5+. Compatible con Axum 0.8 del proyecto.citeweb_search:19#6
+- `axum-client-ip 1.3.1` es la última estable (ene 2026). Requiere Axum 0.7+. Compatible con Axum 0.8.citeweb_search:19#4web_search:19#7
+- `governor 0.10.4` es la dependencia subyacente (GCRA). Estado en `AtomicU64`, thread-safe vía CAS.citeweb_search:19#2web_search:19#9
 
 ---
 
@@ -366,9 +368,9 @@ pub fn spawn_rate_limit_cleanup(config: &GovernorConfig) {
 
 | Herramienta | Propósito | Versión |
 | --- | --- | --- |
-| `tower-governor` | Middleware GCRA para Tower/Axum | 0.3.0 |
-| `axum-client-ip` | Extracción segura de IP real | 1.3.1 |
-| `governor` | Algoritmo GCRA subyacente | (via tower-governor) |
+| `tower-governor` | Middleware GCRA para Tower/Axum | **0.8.0** |
+| `axum-client-ip` | Extracción segura de IP real | **1.3.1** |
+| `governor` | Algoritmo GCRA subyacente | **0.10.4** (via tower-governor) |
 | `tracing` | Logging de eventos 429 | workspace |
 
 ---
@@ -413,3 +415,15 @@ Puede bloquear clientes legítimos.
 * `tower-governor` es el estándar oficial del proyecto para control de tráfico
 * Headers `x-ratelimit-*` obligatorios en todas las respuestas (feature `use_headers`)
 * Cleanup de storage cada 5 minutos via background task
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **tower-governor** | **0.8.0** | Última estable (ago 2025). Requiere Tower 0.5+. Compatible con Axum 0.8. Features: `tracing`, `key-extractor`. |
+| **axum-client-ip** | **1.3.1** | Última estable (ene 2026). Requiere Axum 0.7+. Compatible con Axum 0.8. Extracción de IP real detrás de proxies. |
+| **governor** | **0.10.4** | Última estable (dic 2025). GCRA algorithm. Estado en `AtomicU64`, thread-safe vía CAS. 3.7M+ descargas/mes. |
+| **Tower** | **0.5.x** | Middleware framework. `tower-governor 0.8.0` requiere Tower 0.5+. |
+| **GCRA** | Generic Cell Rate Algorithm | Equivalente funcional a leaky bucket. Sin background drip process. Actualización continua en nanosegundos. |

@@ -1,12 +1,15 @@
 # ADR 0008 — Seguridad: Argon2id + PASETO v4 Local + Refresh Tokens
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizó la versión del toolchain de Rust tras auditoría contra rust-lang.org y crates.io.
+
 | Campo               | Valor                                                                                       |
 | ------------------- | ------------------------------------------------------------------------------------------- |
 | **Estado**          | ✅ Aceptado                                                                                  |
 | **Fecha**           | 2026-05-16                                                                                  |
 | **Autores**         | Milton Hipamo / Laboratorio 3030                                                            |
 | **Relacionado con** | ADR 0003 (Axum middleware), ADR 0006 (RBAC/Sessions/Audit), ADR 0004 (PostgreSQL) |
-| **Última revisión** | 2026-05-16 — Actualización API pasetors 0.7.8 + alineación con ROADMAP-AUTH |
+| **Última revisión** | 2026-05-16 — Actualización toolchain Rust 1.95+ + alineación con ROADMAP-AUTH |
 
 ---
 
@@ -59,8 +62,7 @@ rand_core = { version = "0.6", features = ["getrandom"] }
 # jsonwebtoken = ❌
 ```
 
-**Nota:** `pasetors 0.7.8` requiere Rust ≥ 1.88.0. El proyecto usa 1.86.0 (Edition 2024), 
-por lo cual se actualizará el toolchain a 1.88.0+ antes de implementar este ADR.
+**Nota sobre MSRV:** `pasetors 0.7.8` requiere Rust ≥ 1.88.0. El proyecto opera sobre **Rust 1.95.0** (stable, abril 2026), por lo cual el requisito de MSRV está ampliamente cubierto. El toolchain mínimo aprobado para este workspace es **1.95.0**.
 
 ---
 
@@ -373,9 +375,6 @@ Esta arquitectura permite:
 
 ### ⚠️ Negativas / Trade-offs
 
-* **MSRV elevado por pasetors:** Requiere Rust 1.88.0+ (vs 1.86 del proyecto)
-  → Mitigación: Actualizar rust-toolchain.toml antes de implementar este ADR
-
 * **Ecosistema PASETO menor que JWT**
   → Mitigación: encapsular toda la lógica dentro de `crates/auth`
 
@@ -395,5 +394,16 @@ Esta arquitectura permite:
 4. Los refresh tokens se almacenan únicamente hasheados (SHA-256)
 5. El cleanup de tokens expirados corre mediante job programado (Apalis)
 6. El `user_id` queda registrado en tracing spans para auditoría y observabilidad
-7. **NUEVO:** Rust toolchain se actualiza a 1.88.0+ antes de implementar auth
+7. **NUEVO:** Rust toolchain mínimo aprobado para el workspace: **1.95.0** (stable, abril 2026)
 8. **NUEVO:** `pasetors` usa features `["v4", "std"]` (no solo `"v4"`)
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | Rust toolchain | 1.86.0 | **1.95.0** | Toolchain actualizado a stable actual (abril 2026). MSRV de pasetors 0.7.8 (≥1.88) queda cubierto automáticamente. |
+| 2026-05-16 | argon2 | 0.5 | **0.5.3** | Última estable. v0.6.0-rc.3 en desarrollo; no usar en prod. |
+| 2026-05-16 | pasetors | 0.7 | **0.7.8** | Última estable (feb 2026). MSRV 1.88, getrandom 0.4. |
+| 2026-05-16 | secrecy | 0.10 | **0.10.3** | Última estable. Wrapper de secretos con zeroize. |

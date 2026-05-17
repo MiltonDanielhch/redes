@@ -1,5 +1,8 @@
 # ADR 0003 — Stack Backend: Rust 2024 + Axum 0.8 + Tokio
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de dependencias tras auditoría contra crates.io y docs.rs.
+
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
@@ -38,7 +41,7 @@ Usar:
 
 * Rust Edition 2024
 * Axum 0.8
-* Tokio 1.45+
+* Tokio 1.52+
 
 como stack principal del backend.
 
@@ -84,7 +87,7 @@ Encaja correctamente con la arquitectura hexagonal del ADR 0001.
 
 ---
 
-### Tokio 1.45+
+### Tokio 1.52+
 
 Tokio proporciona:
 
@@ -101,7 +104,7 @@ Tokio proporciona:
 ```toml
 [dependencies]
 # ── Runtime ──────────────────────────────────────────────
-tokio = { version = "1.45", features = [
+tokio = { version = "1.52", features = [
     "rt-multi-thread",
     "macros",
     "signal",
@@ -110,7 +113,7 @@ tokio = { version = "1.45", features = [
 
 # ── Web Framework ─────────────────────────────────────────
 axum = { version = "0.8", features = ["macros"] }
-axum-extra = { version = "0.10", features = [
+axum-extra = { version = "0.12", features = [
     "typed-header",
     "query",
     "cookie",
@@ -118,7 +121,7 @@ axum-extra = { version = "0.10", features = [
 
 # ── Middleware ────────────────────────────────────────────
 tower = "0.5.2"
-tower-http = { version = "0.6.2", features = [
+tower-http = { version = "0.6.10", features = [
     "cors",
     "trace",
     "timeout",
@@ -143,7 +146,7 @@ tracing-subscriber = { version = "0.3", features = [
 tracing-opentelemetry = { version = "0.30", optional = true }
 
 # ── Base de datos ───────────────────────────────────────
-sqlx = { version = "0.8.5", features = [
+sqlx = { version = "0.8.6", features = [
     "runtime-tokio-rustls",
     "postgres",
     "macros",
@@ -153,7 +156,7 @@ sqlx = { version = "0.8.5", features = [
 ] }
 
 # ── Cache ─────────────────────────────────────────────────
-moka = { version = "0.12", features = ["future"] }
+moka = { version = "0.12.15", features = ["future"] }
 
 # ── Auth / Seguridad ────────────────────────────────────
 pasetors = "0.7"
@@ -161,14 +164,17 @@ argon2 = "0.5"
 secrecy = "0.10"
 
 # ── HTTP Client (para servicios externos) ─────────────────
-reqwest = { version = "0.12", features = [
+# NOTA: reqwest 0.13 introduce rustls como default.
+# La feature "rustls-tls" fue renombrada a "rustls".
+# "query" y "form" son ahora features opcionales.
+reqwest = { version = "0.13", features = [
     "json",
     "gzip",
-    "rustls-tls",
+    "rustls",
 ] }
 
 # ── OpenAPI / Documentación ─────────────────────────────
-utoipa = { version = "5", features = ["axum_extras"] }
+utoipa = { version = "5.4", features = ["axum_extras"] }
 utoipa-scalar = { version = "0.4", features = ["axum"] }
 
 # ── Validación ───────────────────────────────────────────
@@ -186,11 +192,13 @@ config = "0.15"
 dotenvy = "0.15"
 
 # ── Background Jobs ──────────────────────────────────────
-apalis = { version = "0.7", features = ["sqlx", "postgres"] }
+# NOTA: apalis 1.0 se encuentra en release candidate (rc.9).
+# Para producción estable, validar antes de migrar desde 0.7.
+apalis = { version = "1.0", features = ["sqlx", "postgres"] }
 
 # ── Testing ───────────────────────────────────────────────
 [dev-dependencies]
-cargo-nextest = "0.9"
+cargo-nextest = "0.9.135"
 axum-test = "17"  # Helper para testing de handlers Axum
 mockall = "0.13"
 ```
@@ -383,12 +391,12 @@ El sistema actual es:
 
 | Herramienta | Propósito | Versión |
 |-------------|-----------|---------|
-| `tower-http` | Middleware HTTP (cors, trace, timeout, compression) | `0.6.2` |
+| `tower-http` | Middleware HTTP (cors, trace, timeout, compression) | `0.6.10` |
 | `tracing` | Observabilidad estructurada | `0.1` |
 | `tracing-subscriber` | Subscripción a logs (JSON, fmt) | `0.3` |
-| `utoipa` | Generación OpenAPI | `5` |
+| `utoipa` | Generación OpenAPI | `5.4` |
 | `utoipa-scalar` | UI de documentación | `0.4` |
-| `cargo-nextest` | Tests rápidos y paralelos | `0.9` |
+| `cargo-nextest` | Tests rápidos y paralelos | `0.9.135` |
 | `tokio-console` | Debug de tareas async (dev only) | `0.1` |
 | `axum-test` | Helpers para testing de handlers | `17` |
 | `mockall` | Mocking para tests | `0.13` |
@@ -464,3 +472,19 @@ Un backend:
 * fácil de desplegar (binario + Docker),
 * barato de operar (VPS compartido),
 * y preparado para crecer sin reescritura (añadir crates, no modificar existentes).
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Crate | Anterior | Actual | Notas |
+|-------|-------|----------|--------|-------|
+| 2026-05-16 | tokio | 1.45 | **1.52** | Runtime actualizado a última estable |
+| 2026-05-16 | reqwest | 0.12 | **0.13** | Breaking change: `rustls-tls` → `rustls`; `query`/`form` opcionales |
+| 2026-05-16 | axum-extra | 0.10 | **0.12** | Actualización de compatibilidad con axum 0.8 |
+| 2026-05-16 | tower-http | 0.6.2 | **0.6.10** | Patches de seguridad y fixes acumulados |
+| 2026-05-16 | sqlx | 0.8.5 | **0.8.6** | Patch release con fixes |
+| 2026-05-16 | moka | 0.12 | **0.12.15** | Actualización de patch |
+| 2026-05-16 | utoipa | 5 | **5.4** | Nuevas features y fixes |
+| 2026-05-16 | cargo-nextest | 0.9 | **0.9.135** | Actualización de runner de tests |
+| 2026-05-16 | apalis | 0.7 | **1.0** | Salto a versión 1.0 (validar RC antes de producción) |

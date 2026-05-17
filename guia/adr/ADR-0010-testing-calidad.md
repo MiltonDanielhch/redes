@@ -63,19 +63,24 @@ cargo install cargo-nextest --locked
 [workspace.dev-dependencies]
 
 tokio      = { version = "1.45", features = ["rt-multi-thread", "macros"] }
-mockall    = "0.13.1"
-reqwest    = { version = "0.12", features = ["json", "cookies"] }
-httpmock   = "0.7"
+mockall    = "0.14.0"
+reqwest    = { version = "0.13.3", features = ["json", "cookies"] }
+httpmock   = "0.8"
 insta      = "1.46"
 proptest   = "1.9"
-fake       = { version = "3.0", features = ["derive", "chrono", "uuid"] }
-sqlx       = { version = "0.8", features = ["runtime-tokio", "postgres", "chrono", "uuid", "migrate"] }
+fake       = { version = "4.0", features = ["derive", "chrono", "uuid"] }
+sqlx       = { version = "0.8.6", features = ["runtime-tokio", "postgres", "chrono", "uuid", "migrate"] }
 ```
 
 **Notas de versión:**
 - `tokio`: feature `"test"` deprecado, usar `"rt-multi-thread"` + `"macros"`
 - `cargo-nextest`: instalar siempre con `--locked` para evitar incompatibilidades
 - `fake`: generación de datos de prueba (emails, nombres, UUIDs)
+- `mockall`: versión 0.14.0 (feb 2026). Soporte mejorado para traits async con `#[async_trait]` y async nativo de Rust 2024.citeweb_search:22#0
+- `reqwest`: versión 0.13.3 (abr 2026). `rustls` como TLS backend por defecto.citeweb_search:22#1
+- `proptest`: versión 1.9 (feb 2026). Property testing.citeweb_search:22#6
+- `cargo-mutants`: versión 27.0.0 (mar 2026). Mutation testing. MSRV 1.88.citeweb_search:22#2web_search:22#3
+- `cargo-llvm-cov`: versión 0.8.7 (may 2026). Cobertura de código con LLVM.citeweb_search:22#5web_search:22#7
 
 ---
 
@@ -561,14 +566,14 @@ jobs:
 | Herramienta | Propósito | Versión |
 | --- | --- | --- |
 | `cargo-nextest` | Runner ultra rápido | 0.9.135 |
-| `cargo-mutants` | Mutation testing | latest |
+| `cargo-mutants` | Mutation testing | 27.0.0 |
 | `proptest` | Property testing | 1.9 |
 | `insta` | Snapshot testing | 1.46 |
-| `cargo-llvm-cov` | Cobertura visual | latest |
-| `sqlx::test` | PostgreSQL efímero por test | 0.8 |
-| `httpmock` | Simulación HTTP | 0.7 |
-| `mockall` | Mocks type-safe | 0.13.1 |
-| `fake` | Generación de datos de prueba | 3.0 |
+| `cargo-llvm-cov` | Cobertura visual | 0.8.7 |
+| `sqlx::test` | PostgreSQL efímero por test | 0.8.6 |
+| `httpmock` | Simulación HTTP | 0.8 |
+| `mockall` | Mocks type-safe | 0.14.0 |
+| `fake` | Generación de datos de prueba | 4.0 |
 
 ---
 
@@ -612,3 +617,20 @@ Los tests completos tardan más.
 * PostgreSQL de testing usa `#[sqlx::test]` (DB temporal por test)
 * `testcontainers` como fallback para CI sin PostgreSQL local
 * `fake` crate para generación de datos de prueba consistentes
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **cargo-nextest** | **0.9.135** | Última estable (may 2026). MSRV 1.91. Features: grabación/replay de tests, benchmarks experimentales, Chrome trace export, `group()` filterset. |
+| **cargo-mutants** | **27.0.0** | Última estable (mar 2026). MSRV 1.88. Mutation testing. `--Zmutate-file` para debug de mutaciones. |
+| **mockall** | **0.14.0** | Última estable (feb 2026). Soporte mejorado para traits async con `#[async_trait]` y async nativo Rust 2024. |
+| **reqwest** | **0.13.3** | Última estable (abr 2026). `rustls` como TLS backend por defecto. Features `json`, `cookies`. |
+| **proptest** | **1.9** | Última estable (feb 2026). Property testing. `RngAlgorithm::Recorder` para capturar datos random. |
+| **insta** | **1.46** | Última estable. Snapshot testing. |
+| **cargo-llvm-cov** | **0.8.7** | Última estable (may 2026). Cobertura LLVM. Mejoras en compilación y soporte proc-macro. |
+| **fake** | **4.0** | Última estable. Generación de datos de prueba. Features: `derive`, `chrono`, `uuid`. |
+| **sqlx::test** | **0.8.6** | Macro `#[sqlx::test]`. Feature `migrate` requerida. |
+| **tokio** | **1.45** | Serie 1.x estable. Features: `rt-multi-thread`, `macros`. |

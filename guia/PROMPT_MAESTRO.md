@@ -28,9 +28,10 @@
 | ⏳ **Frontend I** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
 | ⏳ **Frontend II** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
 | ⏳ **Frontend III** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Monitoreo I** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Monitoreo II** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
-| ⏳ **Monitoreo III** | `04-ROADMAP-FRONTEND.md` | Pendiente | 0% |
+| ⏳ **Monitoreo I** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
+| ⏳ **Monitoreo II** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
+| ⏳ **Monitoreo III** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
+| ⏳ **Monitoreo IV** | `06-ROADMAP-MONITORING.md` | Pendiente | 0% |
 | ⏳ **Auth Fullstack** | `05-ROADMAP-AUTH-FULLSTACK.md` | Pendiente | 0% |
 
 **PROYECTO: Monitoreo de Infraestructura Regional - Gobernación del Beni** 🏛️
@@ -62,15 +63,15 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 
 - **Arquitectura hexagonal en Rust** (Edition 2024)
 - **Workspace monorepo** con Cargo — crates independientes
-- **Backend**: Axum 0.8 + SQLx + PostgreSQL + PASETO v4 (nunca JWT)
+- **Backend**: Axum 0.8 + SQLx 0.8 + PostgreSQL + PASETO v4 (nunca JWT)
 - **Monitoreo**: Inventario de dispositivos, métricas, topología, alertas, detección de intrusos
 - **RBAC completo**: roles, permisos, sesiones y auditoría
-- **Auth**: argon2id + PASETO v4 Local + Soft Delete
+- **Auth**: argon2id (OWASP 2025) + PASETO v4 Local + Soft Delete
 - **Jobs async**: Apalis + métricas + alertas
 - **Cache**: in-process con Moka
-- **Local-First**: SQLite Wasm + sync queue para operación offline (ADR 0020)
+- **Local-First**: @sqlite.org/sqlite-wasm + sync queue para operación offline (ADR 0020)
 - **Observabilidad**: tracing + Sentry + Healthchecks.io
-- **Frontend**: SvelteKit + Svelte 5 + TanStack Query + LayerChart
+- **Frontend**: SvelteKit 2 + Svelte 5 + TanStack Query + LayerChart
 - **SSE**: preferido sobre WebSocket para realtime (ADR 0020)
 - **Agentes**: ligera en sedes remotas (ADR 0020)
 
@@ -86,15 +87,16 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 ## Stack Tecnológico
 
 ### Backend
-- Rust 2024 · Axum 0.8 · SQLx · PostgreSQL
-- argon2id · PASETO v4 (pasetors) · Moka · Apalis · tracing
-- Sentry · Utoipa + Scalar · Resend
-- snmp crate · surge-ping
+- Rust 2024 · Axum 0.8 · SQLx 0.8 · PostgreSQL
+- argon2id (OWASP 2025) · PASETO v4 (pasetors) · Moka · Apalis · tracing
+- Sentry · Utoipa 5 + Scalar · Resend
+- async-snmp 0.12.0 · surge-ping
 
 ### Frontend
-- SvelteKit SSR · Svelte 5 Runes · TypeScript · Tailwind v4
-- shadcn-svelte · TanStack Query · ArkType
-- LayerChart · SSE client
+- SvelteKit 2 SSR · Svelte 5.55.0 Runes · TypeScript · Tailwind v4
+- shadcn-svelte 1.2.7 · TanStack Svelte Query 6.1.28 · ArkType 2.2.0
+- LayerChart 2.0.0-next.63 · SSE client
+- @lucide/svelte (Svelte 5) · @tanstack/svelte-table 9.0.0-alpha.47
 
 ### Componentes del Módulo de Monitoreo (ADR 0020)
 
@@ -129,14 +131,14 @@ La Gobernación del Beni requiere una plataforma centralizada para:
 crates/
 ├── domain/        # Sin dependencias externas — solo thiserror, uuid, time, serde
 ├── application/  # Casos de uso — solo domain
-├── database/     # SQLx + repositorios — domain + sqlx
-├── auth/         # PASETO + argon2 — domain + pasetors
-├── infrastructure/ # Axum + config + utoipa
+├── database/     # SQLx 0.8 + repositorios — domain + sqlx
+├── auth/         # PASETO v4 + argon2 — domain + pasetors
+├── infrastructure/ # Axum 0.8 + config + utoipa 5
 └── ...
 
 apps/
 ├── api/          # Axum server
-├── web/          # SvelteKit
+├── web/          # SvelteKit 2
 ├── agent/        # Agente de monitoreo
 └── ...
 ```
@@ -173,6 +175,7 @@ Principales tablas: users, roles, permissions, sessions, audit_logs, sedes, devi
 - `ROADMAP-FRONTEND.md` — dashboard, dispositivos, métricas, topología, alertas
 - `ROADMAP-AUTH-FULLSTACK.md` — login/registro back+front
 - `ROADMAP-INFRA.md` — deploy con Coolify + PostgreSQL
+- `06-ROADMAP-MONITORING.md` — monitoreo de infraestructura regional
 - `ADR-0020-monitoreo-infraestructura-regional.md` — definición completa del proyecto
 
 ---
@@ -410,6 +413,39 @@ ls -la
 # Verificar toolchain
 just doctor
 ```
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **Rust** | **2024 Edition** (1.95.0 stable) | Edición 2024 estable desde 1.85 (feb 2025). |
+| **Axum** | **0.8.x** (0.8.8 ene 2026) | Traits async nativos de Rust 2024. Sin `async-trait`. |
+| **SQLx** | **0.8.6** (feb 2026) | Última estable. |
+| **PASETO v4** | pasetors / paseto-rs | v4.local: XChaCha20 + BLAKE2b. |
+| **argon2id** | OWASP 2025 | m=47104 (46 MiB), t=1, p=1 (recomendado) o m=19456, t=2, p=1 (mínimo). |
+| **Moka** | latest | Cache in-process. |
+| **Apalis** | latest | Jobs async con PostgreSQL/Redis/SQLite. |
+| **Utoipa** | **5.x** | OpenAPI 3.1. `utoipa-axum` 0.2 para Axum 0.8. |
+| **Svelte** | **5.55.0** (may 2026) | Última estable. Tipos exportados desde `svelte/motion`. |
+| **SvelteKit** | **2.57.0** (may 2026) | Breaking changes en Remote Functions. |
+| **TailwindCSS** | **v4.1** (abr 2026) | `@tailwindcss/vite`. |
+| **shadcn-svelte** | **1.2.7** (abr 2026) | Componentes UI accesibles. |
+| **TanStack Svelte Query** | **6.1.28** (may 2026) | Última estable. |
+| **TanStack Svelte Table** | **9.0.0-alpha.47** | v9 alpha para Svelte 5. v8 no compatible. |
+| **ArkType** | **2.2.0** (mar 2026) | Validación runtime type-safe. |
+| **LayerChart** | **2.0.0-next.63** (may 2026) | Próximo a v2 estable. |
+| **@lucide/svelte** | latest | Paquete oficial para Svelte 5. Reemplaza `lucide-svelte`. |
+| **pnpm** | **11.1** (may 2026) | Última estable. Requiere Node 22+. |
+| **Node.js** | **26.1.0** (Current) / **24** LTS | Node 26.1.0 publicado 7 may 2026. |
+| **Vitest** | **4.1.6** (may 2026) | Última patch estable. |
+| **Playwright** | **1.60.0** (may 2026) | Última estable. |
+| **async-snmp** | **0.12.0** (abr 2026) | SNMPv3 con AES-128/192/256. Requiere Rust 1.88+. |
+| **reqwest** | **0.13.3** (abr 2026) | `rustls` default TLS backend. |
+| **rusqlite** | **0.38.0** (dic 2025) | SQLite embebido. |
+| **tower-governor** | **0.8.0** | Rate limiting GCRA para Tower. |
+| **@sqlite.org/sqlite-wasm** | **3.53.0-build1** | SQLite WASM oficial ES Module. Reemplaza `sql.js`. |
 
 ---
 

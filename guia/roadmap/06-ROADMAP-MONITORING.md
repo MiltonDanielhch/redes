@@ -130,7 +130,7 @@ Este roadmap cubre el **dominio principal** del proyecto: el monitoreo activo de
 - [ ] Crear `crates/database/src/repositories/intrusion_repository.rs`
   - Métodos: `create`, `find_by_mac`, `update_status`, `find_recent`.
 
-- [ ] Tests de integración para cada repositorio con `sqlx::test`.
+- [ ] Tests de integración para cada repositorio con `#[sqlx::test]`.
 
 #### 4. Definición del protocolo de descubrimiento de red (ADR-0024)
 
@@ -147,9 +147,10 @@ Este roadmap cubre el **dominio principal** del proyecto: el monitoreo activo de
   - Función `discover_active_hosts(cidr: &str) -> Vec<IpAddress>`.
   - Timeout por host: 2 segundos. Concurrencia controlada (max 50 pings paralelos).
 
-- [ ] Implementar `SnmpProbe` usando `snmp` crate.
+- [ ] Implementar `SnmpProbe` usando `async-snmp` crate (v0.12.0, Rust 2024).
   - Función `probe_device(ip: &IpAddress, credentials: &SnmpV3Credentials) -> Result<DeviceInfo, MonitoringError>`.
   - Manejo de errores: timeout, authentication failure, unsupported OID.
+  - **Nota:** `async-snmp` v0.12.0 requiere Rust 1.88+. Soporta SNMPv3 con MD5/SHA-1/SHA-2 auth y AES-128/192/256 privacy.
 
 - [ ] Tests unitarios con mocks para SNMP (simular respuestas OID).
 
@@ -184,8 +185,9 @@ cargo test -p domain -p database -p monitoring
 #### 1. Estructura del crate `apps/agent`
 
 - [ ] Crear `apps/agent/Cargo.toml`
-  - Dependencias: `tokio`, `surge-ping`, `snmp`, `serde`, `serde_json`, `time`, `uuid`, `reqwest` (o `hyper` si se elige HTTP/2), `rusqlite` (SQLite embebido para buffer offline), `tracing`, `config` (ADR-0002).
+  - Dependencias: `tokio`, `surge-ping`, `async-snmp`, `serde`, `serde_json`, `time`, `uuid`, `reqwest@0.13.3` (HTTP/2, rustls default), `rusqlite@0.38.0` (SQLite embebido para buffer offline), `tracing`, `config` (ADR-0002).
   - **NO** depende de `domain` ni `database` directamente. El agente es autónomo. Define sus propios tipos serializables o usa un crate `monitoring-protocol` compartido.
+  - **Nota:** `reqwest` v0.13 usa `rustls` como TLS backend por defecto (reemplaza `native-tls`).
 
 - [ ] Crear `apps/agent/src/main.rs`
   - Inicialización: leer configuración (URL del servidor central, sede_id, credenciales SNMP, intervalos).
@@ -326,7 +328,7 @@ ls -lh target/release/agent
 #### 3. Topología de red
 
 - [ ] Crear `crates/monitoring/src/topology/graph.rs`
-  - Estructura `NetworkGraph` usando `petgraph` (crate de grafos en Rust).
+  - Estructura `NetworkGraph` usando `petgraph` (crate de grafos en Rust, última estable).
   - Nodos: `DeviceNode { device_id, ip, mac, device_type }`.
   - Edges: `DeviceLink { source, target, link_type, bandwidth_mbps }`.
 
@@ -477,6 +479,22 @@ Antes de declarar el módulo de Monitoreo como "completo", verificar:
 - [ ] Todo endpoint de mutación de alertas genera `audit_log`.
 - [ ] `cargo test -p monitoring` pasa al 100%.
 - [ ] Binario del agente pesa < 20MB en release.
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **reqwest** | **0.13.3** | Última estable (abr 2026). `rustls` es el TLS backend por defecto. Requiere activar features `json`, `form` si se usan. |
+| **rusqlite** | **0.38.0** | Última estable (dic 2025). SQLite embebido para buffer offline del agente. |
+| **async-snmp** | **0.12.0** | Última estable (abr 2026). Requiere Rust 1.88+. Soporta SNMPv3 con AES-128/192/256. Features: `agent`, `crypto-rustcrypto` (default), `crypto-fips`. |
+| **surge-ping** | **latest** | ICMP async para Rust. Usar `Arc<Client>` para compartir entre tareas. |
+| **petgraph** | **latest** | Grafo de topología de red. Features: `graphmap`, `stable_graph`, `matrix_graph`, `serde-1`. |
+| **serde_json** | **1.x** | Serie 1.x estable. Usar con `serde = { version = "1", features = ["derive"] }`. |
+| **tower-governor** | **0.8.0** | Middleware Tower para rate limiting. Backed por `governor` (GCRA). |
+| **sqlx::test** | **0.8.6** | Tests de integración con base de datos. Feature `macros` requerida. |
+| **governor** | **latest** | GCRA rate limiting. Estado en `AtomicU64` (64 bits), thread-safe vía CAS. |
 
 ---
 

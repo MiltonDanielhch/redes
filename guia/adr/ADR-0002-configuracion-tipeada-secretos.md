@@ -315,11 +315,11 @@ AGENT_API_KEY=agent_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
 
 | Herramienta | Propósito | Versión |
 |-------------|-----------|---------|
-| `config` | Carga tipada de configuración | `0.15` |
-| `dotenvy` | Variables locales de desarrollo | `0.15` |
-| `secrecy` | Protección de secretos sensibles en memoria | `0.10` |
-| `shadow-rs` | Metadata del build (git hash, fecha) | `0.35` |
-| `taplo` | Orden del workspace TOML | `0.9` |
+| `config` | Carga tipada de configuración | `0.15.22` |
+| `dotenvy` | Variables locales de desarrollo | `0.15.7` |
+| `secrecy` | Protección de secretos sensibles en memoria | `0.10.3` |
+| `shadow-rs` | Metadata del build (git hash, fecha) | `0.35.x` |
+| `taplo` | Orden del workspace TOML | `0.10.0` (CLI) |
 
 ---
 
@@ -401,3 +401,16 @@ Un sistema:
 - robusto ante errores humanos,
 - con secretos protegidos en memoria,
 - y compatible con infraestructura limitada.
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **config** | **0.15.22** | Última estable (mar 2026). Soporta múltiples fuentes, layered overrides, integración serde. |
+| **dotenvy** | **0.15.7** | Última estable (mar 2023). Fork mantenido de `dotenv`. MSRV 1.56.1. |
+| **secrecy** | **0.10.3** | Última estable (oct 2024). `SecretBox`/`SecretString` con `zeroize` en drop. `serde` feature para Deserialize. |
+| **shadow-rs** | **0.35.x** | Última estable. Build-time metadata (git hash, fecha, toolchain). Requiere `build.rs`. |
+| **taplo** | **0.10.0** (CLI) | Última estable (may 2025). Toolkit TOML: formatter, linter, schema. |
+| **dotenvy-derive** | **0.15.8** (unstable) | Macro `#[derive(LoadEnv)]`. Usa Rust 2024. Aún en desarrollo. |

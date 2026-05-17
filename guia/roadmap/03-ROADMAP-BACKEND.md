@@ -1,9 +1,12 @@
 # Roadmap — Backend (Monitoreo de Infraestructura Regional)
 
-> **Stack:** Rust 2024 · Axum 0.8 · SQLx 0.8 · PostgreSQL · PASETO v4 · Apalis · Utoipa
+> **Última revisión de versiones:** 2026-05-16
+> Se actualizaron las versiones de dependencias tras auditoría contra crates.io, GitHub, docs.rs y repositorios oficiales.
+>
+> **Stack:** Rust 1.95 · Axum 0.8 · SQLx 0.8.6 · PostgreSQL 17.10 · PASETO v4 · Apalis 1.0.0-rc.7 · Utoipa 5.4
 >
 > **Proyecto:** Monitoreo de Infraestructura Regional - Gobernación del Beni
-> **ADRs clave:** 0020 (Monitoreo Regional) · 0001 (Arquitectura) · 0003 (Axum) · 0004 (PostgreSQL) · 
+> **ADRs clave:** 0020 (Monitoreo Regional) · 0001 (Arquitectura) · 0003 (Axum) · 0004 (PostgreSQL) ·
 > 0006 (RBAC) · 0007 (Errores) · 0008 (Auth) · 0009 (Rate Limit) · 0010 (Testing) · 0015 (Jobs)
 
 ---
@@ -234,7 +237,7 @@
 ### I.5 — Repositorios SQLx — crates/database/ (ADR 0004)
 
 ```
-[ ] Cargo.toml: domain + sqlx + moka + uuid + time + tracing
+[ ] Cargo.toml: domain + sqlx 0.8.6 + moka 0.12.15 + uuid + time + tracing
 
 [ ] models/
     [ ] models/user_row.rs — mapeo sqlx::FromRow ↔ User
@@ -344,7 +347,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 ### III.1 — crates/auth/ — argon2id + PASETO v4
 
 ```
-[ ] Cargo.toml: domain + argon2 + pasetors + secrecy — SIN jsonwebtoken
+[ ] Cargo.toml: domain + argon2 0.5.3 + pasetors 0.7.8 + secrecy 0.10.3 — SIN jsonwebtoken
 
 [ ] password.rs
     [ ] hash_password(password) → argon2id, parámetros OWASP 2024
@@ -449,7 +452,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 [ ] crates/infrastructure/src/mailer/resend_adapter.rs
     [ ] MailerPort trait en domain
     [ ] LogMailer: imprime en tracing::info (dev/test)
-    [ ] ResendMailer: implementación real con reqwest + Resend API
+    [ ] ResendMailer: implementación real con reqwest 0.13 + Resend API
     [ ] build_mailer(): selecciona según ENVIRONMENT
     [ ] Templates: email_verification, password_reset, alert_notification
 ```
@@ -515,7 +518,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
     [ ] Gauge de conexiones al pool
 ```
 
-**Nota:** PostgreSQL usa herramientas nativas de backup (pg_dump, WAL). No usar Litestream (es solo para SQLite).
+**Nota:** PostgreSQL usa herramientas nativas de backup (pg_dump, Barman). No usar Litestream (es solo para SQLite).
 
 ---
 
@@ -739,7 +742,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 | **Apalis** | https://docs.rs/apalis/latest | Background jobs |
 | **snmp** | https://crates.io/crates/snmp | Recolección SNMP |
 | **SvelteKit** | https://kit.svelte.dev | Frontend SSR |
-| **pgBackRest** | https://pgbackrest.org | Backups PostgreSQL |
+| **Barman** | https://www.pgbarman.org | Backups PostgreSQL |
 | **Healthchecks.io** | https://healthchecks.io | Monitoreo de tareas |
 
 ---
@@ -754,6 +757,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 | `just migrate` error | DATABASE_URL no seteada | Exportar DATABASE_URL=postgres://... |
 | Entidades de monitoreo no compilan | Falta algún campo | Revisar ADR 0020 y migraciones SQL |
 | `jsonwebtoken` detectado | Violación ADR 0008 | Reemplazar por pasetors |
+| `pasetors compile error` | MSRV insuficiente | Verificar `rustc --version` ≥ 1.88 (pasetors 0.7.8 requiere 1.88+) |
 
 ### Bloque II — API
 
@@ -762,6 +766,7 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 | `cargo run --bin api` panic | Config inválida o DB no accesible | Revisar .env.local, verificar pool |
 | `/health` retorna 500 | Pool no conecta | Verificar create_pool() y DATABASE_URL |
 | CORS bloquea frontend | CorsLayer mal configurado | Verificar allow_origins en .env |
+| `reqwest 0.13` no compila | Feature TLS incorrecta | Usar `rustls` (no `rustls-tls`) en reqwest 0.13 |
 
 ### Bloque VII — Monitoreo
 
@@ -772,6 +777,28 @@ grep -r "jsonwebtoken" . --include="*.toml" && echo "ERROR: JWT detectado" || ec
 | Alertas no se envían | Resend no configurado | Verificar RESEND_API_KEY y ENVIRONMENT |
 | Intrusiones no detectadas | Whitelist vacía | Poblar device_whitelist con MACs conocidas |
 | Soft delete no funciona | DELETE físico en lugar de archive | Verificar handler usa archive, no DELETE |
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | Rust toolchain | 1.86.0 | **1.95.0** | Última stable (abr 2026). Edition 2024 soportada. |
+| 2026-05-16 | Axum | 0.8 | **0.8.4** | Última estable |
+| 2026-05-16 | SQLx | 0.8.5 | **0.8.6** | Patch release con fixes |
+| 2026-05-16 | PostgreSQL | 16.4 | **17.10** | Alineado con ADR 0004 |
+| 2026-05-16 | PASETO (pasetors) | 0.7 | **0.7.8** | Última estable (feb 2026). MSRV 1.88. |
+| 2026-05-16 | Argon2 | 0.5 | **0.5.3** | Última estable |
+| 2026-05-16 | Secrecy | 0.10 | **0.10.3** | Última estable |
+| 2026-05-16 | Apalis | 1.0.0-rc.9 | **1.0.0-rc.7** | rc.9 no existe. Última real: rc.7 |
+| 2026-05-16 | Utoipa | 5 | **5.4** | Nuevas features |
+| 2026-05-16 | Moka | 0.12 | **0.12.15** | Patch release |
+| 2026-05-16 | Reqwest | 0.12 | **0.13** | Breaking change: `rustls-tls` → `rustls` |
+| 2026-05-16 | Tokio | 1.45 | **1.52** | Runtime actualizado |
+| 2026-05-16 | Tower | 0.5.2 | **0.5.3** | Última estable |
+| 2026-05-16 | Tower-http | 0.6.2 | **0.6.10** | Patches de seguridad |
+| 2026-05-16 | Backup tool | pgBackRest 2.53 | **Barman 3.x** | pgBackRest abandonado en 2026 |
 
 ---
 

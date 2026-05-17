@@ -1,5 +1,8 @@
 # ADR 0006 — RBAC, Sesiones y Auditoría
 
+> **Última revisión de versiones:** 2026-05-16  
+> Se actualizaron las versiones de herramientas tras auditoría contra crates.io, GitHub y docs.rs.
+
 | Campo | Valor |
 |-------|-------|
 | **Estado** | ✅ Aceptado |
@@ -437,12 +440,12 @@ pub async fn audit_middleware(
 
 | Herramienta | Propósito | Versión |
 |-------------|-----------|---------|
-| `pasetors` | PASETO v4 tokens | `0.7` |
-| `argon2` | Password hashing (argon2id) | `0.5` |
-| `secrecy` | Protección de secretos en memoria | `0.10` |
-| `moka` | Cache de permisos RBAC | `0.12` |
-| `sqlx` | Queries compile-time checked | `0.8.5` |
-| `cargo-nextest` | Tests rápidos | `0.9` |
+| `pasetors` | PASETO v4 tokens | `0.7.8` |
+| `argon2` | Password hashing (argon2id) | `0.5.3` |
+| `secrecy` | Protección de secretos en memoria | `0.10.3` |
+| `moka` | Cache de permisos RBAC | `0.12.15` |
+| `sqlx` | Queries compile-time checked | `0.8.6` |
+| `cargo-nextest` | Tests rápidos | `0.9.135` |
 
 **Nota:** No se usa `tower-sessions` (sesiones manejadas manualmente con PASETO + PostgreSQL). No se usa `zxcvbn` (validación de password con reglas simples: 12 chars, mayúscula, minúscula, número, símbolo).
 
@@ -515,3 +518,16 @@ Un sistema de seguridad:
 * recuperable (soft delete),
 * verificable (email verification),
 * y preparado para cumplimiento institucional.
+
+---
+
+## Registro de cambios de versiones
+
+| Fecha | Componente | Anterior | Actual | Notas |
+|-------|------------|----------|--------|-------|
+| 2026-05-16 | pasetors | 0.7 | **0.7.8** | Última estable (feb 2026). MSRV 1.88, getrandom 0.4. |
+| 2026-05-16 | argon2 | 0.5 | **0.5.3** | Última estable. v0.6.0-rc.3 en desarrollo; no usar en prod. |
+| 2026-05-16 | secrecy | 0.10 | **0.10.3** | Última estable. Wrapper de secretos con zeroize. |
+| 2026-05-16 | moka | 0.12 | **0.12.15** | Patch release con fixes |
+| 2026-05-16 | sqlx | 0.8.5 | **0.8.6** | Patch release con fixes |
+| 2026-05-16 | cargo-nextest | 0.9 | **0.9.135** | Actualización de runner de tests |

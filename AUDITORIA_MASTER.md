@@ -1,63 +1,63 @@
 # 🛠️ Auditoría de Software — Lab 3030
 
-> Generado: `2026-05-16 15:51`
+> Generado: `2026-05-16 23:30`
 
 ## Resumen
 
 | Métrica | Valor |
 | :--- | :--- |
 | **Proyecto** | `redes` |
-| **Líneas de Código (Netas)** | 11019 LoC |
-| **Peso Total del Proyecto** | 432.88KB |
-| **Timestamp** | 2026-05-16 15:51 |
+| **Líneas de Código (Netas)** | 13271 LoC |
+| **Peso Total del Proyecto** | 588.34KB |
+| **Timestamp** | 2026-05-16 23:30 |
 | **Estado** | Activa |
 
 ## Breakdown por Capa
 
 | Capa / Archivo | LoC | Peso | % LoC |
 | :--- | ---: | ---: | ---: |
-| `guia` | 10755 | 423.47KB | 97.6% ███████████████████ |
-| `audit.py` | 146 | 5.43KB | 1.3%  |
-| `README.md` | 118 | 3.98KB | 1.1%  |
-| **TOTAL** | **11019** | **432.88KB** | 100% |
+| `guia` | 12908 | 571.47KB | 97.3% ███████████████████ |
+| `README.md` | 217 | 11.44KB | 1.6%  |
+| `audit.py` | 146 | 5.43KB | 1.1%  |
+| **TOTAL** | **13271** | **588.34KB** | 100% |
 
 ## Mapa de Arquitectura
 
 ```text
 redes/
-├── README.md (118 LoC | 3.98KB)
+├── README.md (217 LoC | 11.44KB)
 ├── audit.py (146 LoC | 5.43KB)
-└── guia/ [423.47KB]
-    ├── PROMPT_MAESTRO.md (311 LoC | 13.94KB)
-    ├── adr/ [279.04KB]
-    │   ├── ADR-0001-arquitectura-hexagonal.md (290 LoC | 13.64KB)
-    │   ├── ADR-0002-configuracion-tipeada-secretos.md (314 LoC | 16.42KB)
-    │   ├── ADR-0003-stack-backend-rust-axum.md (359 LoC | 13.38KB)
-    │   ├── ADR-0004-persistencia-postgresql-docker.md (356 LoC | 12.31KB)
-    │   ├── ADR-0005-migraciones-seeding.md (463 LoC | 17.12KB)
-    │   ├── ADR-0006-rbac-sessions-audit.md (402 LoC | 15.52KB)
-    │   ├── ADR-0007-manejo-errores.md (438 LoC | 17.89KB)
-    │   ├── ADR-0008-seguridad-auth-paseto.md (263 LoC | 8.90KB)
-    │   ├── ADR-0009-rate-limiting.md (250 LoC | 8.73KB)
-    │   ├── ADR-0010-testing-calidad.md (386 LoC | 11.05KB)
-    │   ├── ADR-0011-estandares-desarrollo.md (319 LoC | 9.35KB)
-    │   ├── ADR-0012-herramientas-desarrollo.md (375 LoC | 13.21KB)
-    │   ├── ADR-0013-infraestructura-docker-compose.md (373 LoC | 10.34KB)
-    │   ├── ADR-0014-monitoreo-tareas-criticas.md (209 LoC | 7.38KB)
-    │   ├── ADR-0015-apalis-jobs.md (87 LoC | 3.66KB)
-    │   ├── ADR-0016-documentacion-openapi-utoipa.md (423 LoC | 11.91KB)
-    │   ├── ADR-0017-frontend-sveltekit-svelte5.md (374 LoC | 10.88KB)
-    │   ├── ADR-0018-sintonia-cli.md (392 LoC | 11.43KB)
-    │   ├── ADR-0019-coolify-deploy.md (298 LoC | 9.44KB)
-    │   ├── ADR-0020-monitoreo-infraestructura-regional.md (579 LoC | 18.62KB)
-    │   ├── ADR-0021-local-first-sync-offline.md (227 LoC | 9.78KB)
-    │   ├── ADR-0022-agentes-monitoreo-distribuidos.md (324 LoC | 12.70KB)
-    │   └── PROMPT_MAESTRO.md (347 LoC | 15.37KB)
-    ├── roadmap/ [124.72KB]
-    │   ├── 01-ROADMAP-MASTER.md (191 LoC | 8.18KB)
-    │   ├── 02-ROADMAP-GENESIS.md (415 LoC | 19.14KB)
-    │   ├── 03-ROADMAP-BACKEND.md (638 LoC | 34.78KB)
-    │   ├── 04-ROADMAP-FRONTEND.md (715 LoC | 40.50KB)
-    │   └── 05-ROADMAP-AUTH-FULLSTACK.md (457 LoC | 22.12KB)
-    └── verification_comando.md (180 LoC | 5.76KB)
+└── guia/ [571.47KB]
+    ├── PROMPT_MAESTRO.md (344 LoC | 16.38KB)
+    ├── adr/ [387.06KB]
+    │   ├── ADR-0001-arquitectura-hexagonal.md (296 LoC | 14.33KB)
+    │   ├── ADR-0002-configuracion-tipeada-secretos.md (324 LoC | 17.26KB)
+    │   ├── ADR-0003-stack-backend-rust-axum.md (379 LoC | 14.69KB)
+    │   ├── ADR-0004-persistencia-postgresql-docker.md (387 LoC | 14.75KB)
+    │   ├── ADR-0005-migraciones-seeding.md (475 LoC | 17.95KB)
+    │   ├── ADR-0006-rbac-sessions-audit.md (414 LoC | 16.34KB)
+    │   ├── ADR-0007-manejo-errores.md (449 LoC | 19.08KB)
+    │   ├── ADR-0008-seguridad-auth-paseto.md (315 LoC | 12.74KB)
+    │   ├── ADR-0009-rate-limiting.md (332 LoC | 13.26KB)
+    │   ├── ADR-0010-testing-calidad.md (478 LoC | 16.12KB)
+    │   ├── ADR-0011-estandares-desarrollo.md (366 LoC | 12.78KB)
+    │   ├── ADR-0012-herramientas-desarrollo.md (440 LoC | 16.73KB)
+    │   ├── ADR-0013-infraestructura-docker-compose.md (486 LoC | 20.08KB)
+    │   ├── ADR-0014-monitoreo-tareas-criticas.md (263 LoC | 10.24KB)
+    │   ├── ADR-0015-apalis-jobs.md (357 LoC | 13.47KB)
+    │   ├── ADR-0016-documentacion-openapi-utoipa.md (504 LoC | 17.19KB)
+    │   ├── ADR-0017-frontend-sveltekit-svelte5.md (736 LoC | 31.54KB)
+    │   ├── ADR-0018-sintonia-cli.md (453 LoC | 16.58KB)
+    │   ├── ADR-0019-coolify-deploy.md (356 LoC | 17.87KB)
+    │   ├── ADR-0020-monitoreo-infraestructura-regional.md (609 LoC | 21.55KB)
+    │   ├── ADR-0021-local-first-sync-offline.md (476 LoC | 22.37KB)
+    │   └── ADR-0022-agentes-monitoreo-distribuidos.md (585 LoC | 30.14KB)
+    ├── roadmap/ [160.27KB]
+    │   ├── 01-ROADMAP-MASTER.md (226 LoC | 11.18KB)
+    │   ├── 02-ROADMAP-GENESIS.md (446 LoC | 21.52KB)
+    │   ├── 03-ROADMAP-BACKEND.md (662 LoC | 36.45KB)
+    │   ├── 04-ROADMAP-FRONTEND.md (735 LoC | 42.36KB)
+    │   ├── 05-ROADMAP-AUTH-FULLSTACK.md (472 LoC | 23.35KB)
+    │   └── 06-ROADMAP-MONITORING.md (355 LoC | 25.41KB)
+    └── verification_comando.md (188 LoC | 7.76KB)
 ```

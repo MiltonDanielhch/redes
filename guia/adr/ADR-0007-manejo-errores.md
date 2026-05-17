@@ -483,12 +483,13 @@ X-RateLimit-Reset: 1715863200
 
 ## Herramientas aprobadas
 
-| Herramienta | Propósito | Notas |
-|-------------|-----------|-------|
-| `thiserror` | Errores tipados en dominio | Solo en `crates/` |
-| `anyhow` | Errores genéricos en bins | **Solo** en `apps/` (api, agent, cli), nunca en `crates/` |
-| `serde_json` | Serialización de errores HTTP | En `apps/api/src/error.rs` |
-| `tracing` | Logging estructurado | Con contexto (request_id, user_id) |
+| Herramienta | Propósito | Versión | Notas |
+|-------------|-----------|---------|-------|
+| `thiserror` | Errores tipados en dominio | `2.0.18` | Última estable (feb 2026). Soporta `#[no_std]` con `default-features = false` bajo rustc 1.81.0+. Usar en `crates/` |
+| `anyhow` | Errores genéricos en bins | `1.0.98` | Última estable (abr 2026). **Solo** en `apps/` (api, agent, cli), nunca en `crates/` |
+| `eyre` | Reportes de error personalizados | `0.6.12` | Fork de anyhow con handlers customizables. Alternativa si se necesita `color-eyre` |
+| `serde_json` | Serialización de errores HTTP | `1.0.149` | Última estable (ene 2026). En `apps/api/src/error.rs` |
+| `tracing` | Logging estructurado | `0.1` | Con contexto (request_id, user_id) |
 
 ---
 
@@ -554,3 +555,16 @@ Un sistema donde:
 * la trazabilidad es completa,
 * la seguridad no se compromete,
 * y el diagnóstico es eficiente.
+
+---
+
+## Notas de actualización de versiones (2026-05-16)
+
+| Componente | Versión/Config | Notas |
+|------------|----------------|-------|
+| **thiserror** | **2.0.18** | Última estable (feb 2026). Soporta `#[no_std]` con `default-features = false` bajo rustc 1.81.0+. Usar en `crates/` (librerías). |
+| **thiserror-impl** | **2.0.18** | Procedural macros para `thiserror`. Se instala automáticamente como dependencia. |
+| **anyhow** | **1.0.98** | Última estable (abr 2026). Errores genéricos con contexto. **Solo en `apps/`**, nunca en `crates/`. |
+| **eyre** | **0.6.12** | Fork de anyhow con handlers customizables. Usar con `color-eyre` para pretty-print. |
+| **serde_json** | **1.0.149** | Última estable (ene 2026). Serialización JSON. Serie 1.x estable. |
+| **tracing** | **0.1.x** | Serie 0.1.x estable. Logging estructurado con spans. |
