@@ -1,0 +1,14 @@
+# Ubicación: `lefthook.yml`
+#
+# Descripción: Configuración de hooks pre-commit y pre-push.
+#
+# ADRs relacionados: 0011 (Estándares de Desarrollo)
+
+pre-commit:
+  - cargo fmt --all -- --check
+  - cargo clippy --workspace -- -D warnings
+
+pre-push:
+  - cargo clippy --workspace -- -D warnings
+  - cargo nextest run --workspace
+  - cargo deny check

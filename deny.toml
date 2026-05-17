@@ -1,0 +1,40 @@
+# Ubicación: `deny.toml`
+#
+# Descripción: Configuración de cargo-deny para análisis de seguridad.
+#              Bloquea JWT y licencias prohibidas.
+#
+# ADRs relacionados: 0008 (PASETO), 0010 (Testing)
+
+[licenses]
+version = 2
+allow = [
+    "MIT",
+    "Apache-2.0",
+    "BSD-2-Clause",
+    "BSD-3-Clause",
+    "ISC",
+    "CC0-1.0",
+]
+exceptions = []
+
+[[licenses.clarify]]
+name = "ring"
+expression = "MIT AND ISC AND OpenSSL"
+license-files = [{ path = "LICENSE", hash = 0xbd0eed23 }]
+
+[advisories]
+version = 2
+vulnerability = "deny"
+unmaintained = "warn"
+notice = "warn"
+[yanked]
+version = "warn"
+ignore = []
+
+[[bans.deny]]
+name = "jsonwebtoken"
+expression = "jsonwebtoken:*"
+
+[[bans.deny]]
+name = "jwt"
+expression = "jwt:*"

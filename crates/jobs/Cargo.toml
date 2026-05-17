@@ -1,0 +1,18 @@
+# Ubicación: `crates/jobs/Cargo.toml`
+#
+# Descripción: Módulo de jobs - tareas en background.
+#               TODO: Implementar con Apalis cuando esté estable.
+#
+# ADRs relacionados: 0015 (Apalis Jobs), 0020 (Monitoreo Regional)
+
+[package]
+name = "jobs"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }

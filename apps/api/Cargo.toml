@@ -1,0 +1,37 @@
+# Ubicación: `apps/api/Cargo.toml`
+#
+# Descripción: Aplicación API - servidor Axum 0.8.
+#
+# ADRs relacionados: 0003 (Axum 0.8), 0020 (Monitoreo Regional)
+
+[package]
+name = "api"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "api"
+path = "src/main.rs"
+
+[dependencies]
+infrastructure = { path = "../../crates/infrastructure" }
+database = { path = "../../crates/database" }
+auth = { path = "../../crates/auth" }
+storage = { path = "../../crates/storage" }
+inventory = { path = "../../crates/inventory" }
+monitoring = { path = "../../crates/monitoring" }
+jobs = { path = "../../crates/jobs" }
+sync = { path = "../../crates/sync" }
+snmp = { path = "../../crates/snmp" }
+topology = { path = "../../crates/topology" }
+
+domain = { path = "../../crates/domain" }
+application = { path = "../../crates/application" }
+
+axum = { workspace = true }
+tokio = { workspace = true }
+tower = { workspace = true }
+tower-http = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

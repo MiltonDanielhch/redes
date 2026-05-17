@@ -1,0 +1,41 @@
+# Rust
+/target
+/Cargo.lock
+**/*.rs.bk
+*.pdb
+
+# Node
+node_modules/
+.pnpm-store/
+dist/
+build/
+.env
+.env.local
+.env.*.local
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# Database
+*.db
+*.db-journal
+*.sqlite
+*.sqlite3
+
+# Data
+/data/
+*.log
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Docker
+.docker/
+
+# Misc
+*.bak
+*.tmp

@@ -1,0 +1,68 @@
+# Ubicación: `Cargo.toml` raíz del workspace
+#
+# Descripción: Workspace Cargo para el proyecto de Monitoreo de Infraestructura Regional.
+#               Define las dependencias compartidas y perfiles de compilación.
+#
+# ADRs relacionados: 0001 (Hexagonal), 0003 (Axum 0.8), 0004 (PostgreSQL)
+
+[workspace]
+resolver = "2"
+members = [
+    "crates/domain",
+    "crates/application",
+    "crates/infrastructure",
+    "crates/database",
+    "crates/auth",
+    "crates/inventory",
+    "crates/monitoring",
+    "crates/jobs",
+    "crates/sync",
+    "crates/snmp",
+    "crates/topology",
+    "crates/storage",
+    "apps/api",
+    "apps/agent",
+]
+
+[workspace.dependencies]
+thiserror = "2.0.18"
+uuid = { version = "1.23.1", features = ["v4", "serde"] }
+time = { version = "0.3.47", features = ["serde", "parsing", "formatting"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.149"
+tokio = { version = "1.52.3", features = ["full"] }
+axum = "0.8.9"
+tower = "0.5.3"
+tower-http = { version = "0.6.10", features = ["cors", "fs", "trace", "util"] }
+sqlx = { version = "0.9.0-alpha.1", features = ["runtime-tokio", "postgres", "chrono", "uuid", "json"] }
+moka = { version = "0.12.15", features = ["sync"] }
+pasetors = { version = "0.7.8", features = ["v4", "std"] }
+argon2 = "0.6.0-rc.8"
+secrecy = "0.10.3"
+rand_core = { version = "0.6", features = ["getrandom"] }
+reqwest = { version = "0.13.3", features = ["json"] }
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+utoipa = "5.5.0"
+anyhow = "1.0.102"
+async-trait = "0.1.89"
+aws-config = "1"
+aws-sdk-s3 = "1"
+base64 = "0.22"
+toml = "1.1.2"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true
+incremental = false
+
+[profile.release-size]
+inherits = "release"
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

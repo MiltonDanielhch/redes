@@ -1,0 +1,18 @@
+# Ubicación: `crates/snmp/Cargo.toml`
+#
+# Descripción: Módulo SNMP - polling con async-snmp.
+#
+# ADRs relacionados: 0020 (Monitoreo Regional)
+
+[package]
+name = "snmp"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }
+async-snmp = "0.12.0"

@@ -1,0 +1,18 @@
+# Ubicación: `crates/monitoring/Cargo.toml`
+#
+# Descripción: Módulo de monitoreo - métricas y health checks.
+#
+# ADRs relacionados: 0014 (Healthchecks), 0020 (Monitoreo Regional)
+
+[package]
+name = "monitoring"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }

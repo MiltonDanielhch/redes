@@ -1,0 +1,17 @@
+# Ubicación: `crates/domain/Cargo.toml`
+#
+# Descripción: Capa de dominio - sin dependencias externas.
+#               Solo usa: thiserror, uuid, time, serde.
+#
+# ADRs relacionados: 0001 (Hexagonal)
+
+[package]
+name = "domain"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+thiserror = "2.0.18"
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }

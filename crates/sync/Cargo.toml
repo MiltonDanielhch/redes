@@ -1,0 +1,17 @@
+# Ubicación: `crates/sync/Cargo.toml`
+#
+# Descripción: Módulo de sincronización offline-first.
+#
+# ADRs relacionados: 0021 (Local-First Sync Offline), 0020 (Monitoreo Regional)
+
+[package]
+name = "sync"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }
+tokio = { workspace = true }

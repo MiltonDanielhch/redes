@@ -1,0 +1,25 @@
+# Ubicación: `apps/agent/Cargo.toml`
+#
+# Descripción: Agente de monitoreo - recolección distribuida en sedes remotas.
+#
+# ADRs relacionados: 0022 (Agentes Distribuidos), 0020 (Monitoreo Regional)
+
+[package]
+name = "agent"
+version = "0.1.0"
+edition = "2024"
+
+[[bin]]
+name = "agent"
+path = "src/main.rs"
+
+[dependencies]
+snmp = { path = "../../crates/snmp" }
+sync = { path = "../../crates/sync" }
+monitoring = { path = "../../crates/monitoring" }
+
+tokio = { workspace = true }
+reqwest = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }

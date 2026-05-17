@@ -1,0 +1,20 @@
+# Ubicación: `crates/auth/Cargo.toml`
+#
+# Descripción: Capa de autenticación - PASETO v4 + Argon2id.
+#               JWT PROHIBIDO - usa PASETO v4 Local exclusivamente.
+#
+# ADRs relacionados: 0008 (PASETO)
+
+[package]
+name = "auth"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+base64 = "0.22"
+rand_core = { version = "0.6", features = ["getrandom"] }
+thiserror = "2.0.18"
+
+[lints.rust]
+unsafe_code = "forbid"

@@ -1,0 +1,8 @@
+# Ubicación: `pnpm-workspace.yaml`
+#
+# Descripción: Configuración de pnpm workspace para monorepo.
+#
+# ADRs relacionados: 0017 (SvelteKit)
+
+packages:
+  - "apps/web"

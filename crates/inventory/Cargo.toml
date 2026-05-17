@@ -1,0 +1,16 @@
+# Ubicación: `crates/inventory/Cargo.toml`
+#
+# Descripción: Módulo de inventario de dispositivos.
+#
+# ADRs relacionados: 0020 (Monitoreo Regional)
+
+[package]
+name = "inventory"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+domain = { path = "../domain" }
+uuid = { workspace = true }
+time = { workspace = true }
+serde = { workspace = true }
