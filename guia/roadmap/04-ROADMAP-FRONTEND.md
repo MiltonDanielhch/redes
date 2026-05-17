@@ -19,9 +19,9 @@
 
 | Bloque | Nombre | Progreso |
 |--------|--------|----------|
-| FE.I | Fundación — SvelteKit + Tooling | [ ] |
-| FE.II | Tipos generados + Estado + Validación | [ ] |
-| FE.III | Layouts, navegación y SSR | [ ] |
+| FE.I | Fundación — SvelteKit + Tooling | [x] |
+| FE.II | Tipos generados + Estado + Validación | [x] |
+| FE.III | Layouts, navegación y SSR | [x] |
 | FE.IV | Dashboard de Monitoreo | [ ] |
 | FE.V | Inventario y Dispositivos | [ ] |
 | FE.VI | Métricas, Gráficos y SSE | [ ] |
@@ -40,42 +40,42 @@
 > **Referencia:** ADR 0017, ADR 0020, ADR 0021
 
 ```
-[ ] SvelteKit SSR setup en apps/web/:
-    [ ] pnpm create svelte@latest apps/web
-        [ ] template: Skeleton project
-        [ ] TypeScript: Yes
-        [ ] Add ESLint, Prettier, Playwright: Yes
-    [ ] adapter: @sveltejs/adapter-node@5.5.4 (mode: standalone) ← SSR para SEO/seguridad
-    [ ] output: SSR (no static, no SPA)
+[x] SvelteKit SSR setup en apps/web/:
+    [x] pnpm create svelte@latest apps/web
+        [x] template: Skeleton project
+        [x] TypeScript: Yes
+        [x] Add ESLint, Prettier, Playwright: Yes
+    [x] adapter: @sveltejs/adapter-node@5.5.4 (mode: standalone) ← SSR para SEO/seguridad
+    [x] output: SSR (no static, no SPA)
 
-[ ] Configurar Tailwind v4:
-    [ ] pnpm install -D tailwindcss @tailwindcss/vite
-    [ ] vite.config.ts: import tailwindcss from "@tailwindcss/vite"
-    [ ] src/app.css: @import "tailwindcss";
-    [ ] applyBaseStyles: false (shadcn-svelte maneja sus tokens)
+[x] Configurar Tailwind v4:
+    [x] pnpm install -D tailwindcss @tailwindcss/vite
+    [x] vite.config.ts: import tailwindcss from "@tailwindcss/vite"
+    [x] src/app.css: @import "tailwindcss";
+    [x] applyBaseStyles: false (shadcn-svelte maneja sus tokens)
 
-[ ] shadcn-svelte init:
-    [ ] pnpm dlx shadcn-svelte@latest init
-    [ ] baseColor: slate
-    [ ] aliases: $lib/components/ui, $lib/utils, etc.
+[x] shadcn-svelte init:
+    [x] pnpm dlx shadcn-svelte@latest init
+    [x] baseColor: slate
+    [x] aliases: $lib/components/ui, $lib/utils, etc.
 
-[ ] shadcn-svelte components instalados:
-    [ ] Base: button, card, badge, separator, avatar, table
-    [ ] Forms: input, label, form, select, textarea, checkbox
-    [ ] Feedback: alert, dialog, dropdown-menu, toast, sonner
-    [ ] Navigation: tabs, navigation-menu, sidebar, sheet, breadcrumb
-    [ ] Data: data-table, pagination, command
-    [ ] Extras: tooltip, skeleton, progress, calendar
+[x] shadcn-svelte components instalados:
+    [x] Base: button, card, badge, separator, avatar, table
+    [x] Forms: input, label, form, select, textarea, checkbox
+    [x] Feedback: alert, dialog, dropdown-menu, toast, sonner
+    [x] Navigation: tabs, navigation-menu, sidebar, sheet, breadcrumb
+    [x] Data: data-table, pagination, command
+    [x] Extras: tooltip, skeleton, progress, calendar
 
-[ ] Dependencias adicionales:
-    [ ] @tanstack/svelte-query@6.1.28
-    [ ] @tanstack/svelte-table@9.0.0-alpha.47 ← v9 alpha requerida para Svelte 5
-    [ ] arktype@2.2.0
-    [ ] layerchart@2.0.0-next.63
-    [ ] @lucide/svelte ← paquete oficial para Svelte 5 (no lucide-svelte)
-    [ ] date-fns (timezone America/La_Paz)
+[x] Dependencias adicionales:
+    [x] @tanstack/svelte-query@6.1.28
+    [x] @tanstack/svelte-table@9.0.0-alpha.47 ← v9 alpha requerida para Svelte 5
+    [x] arktype@2.2.0
+    [x] layerchart@2.0.0-next.63
+    [x] @lucide/svelte ← paquete oficial para Svelte 5 (no lucide-svelte)
+    [x] date-fns (timezone America/La_Paz)
 
-[ ] Verificar: pnpm dev arranca sin errores en localhost:5173
+[x] Verificar: pnpm dev arranca sin errores en localhost:5173
 ```
 
 ---
@@ -86,47 +86,46 @@
 > **Referencia:** ADR 0016, ADR 0017, ADR 0020
 
 ```
-[ ] Generación de tipos desde OpenAPI:
-    [ ] Script: scripts/generate-types.ts
-    [ ] Descargar /openapi.json del backend corriendo
-    [ ] openapi-typescript → src/lib/generated/api-types.ts
-    [ ] Tipos auto-generados: User, Sede, Device, MetricReading, Alert, IntrusionEvent, etc.
-    [ ] CI check: falla build si types desincronizados con backend
-    [ ] NUNCA editar api-types.ts manualmente
+[x] Generación de tipos desde OpenAPI:
+    [x] Script: scripts/generate-types.ts
+    [x] Tipos desde DTOs del backend: src/lib/generated/api-types.ts
+    [x] Tipos: User, Sede, Device, MetricReading, Alert, IntrusionEvent, etc.
+    [ ] CI check: falla build si types desincronizados con backend (pendiente)
+    [ ] NUNCA editar api-types.ts manualmente (requiere CI)
 
-[ ] Tipos manuales solo para UI/estado (no para dominio):
-    [ ] src/lib/types/ui.ts — Toast, ModalState, FilterState, ChartConfig
-    [ ] src/lib/types/auth.ts — AuthState (local, no del backend)
+[x] Tipos manuales solo para UI/estado (no para dominio):
+    [x] src/lib/types/ui.ts — Toast, ModalState, FilterState, ChartConfig
+    [x] src/lib/types/auth.ts — AuthState (local, no del backend)
 
-[ ] API client con fetch + PASETO:
-    [ ] src/lib/api/client.ts
-        [ ] baseURL desde env: PUBLIC_API_URL
-        [ ] headers: Authorization: Bearer ${accessToken}
-        [ ] Content-Type: application/json
-        [ ] X-Request-Id generado por cliente
-    [ ] Manejo de 401: intentar refresh → re-login si falla
-    [ ] Manejo de 403: redirigir a /dashboard (sin permiso)
-    [ ] Manejo de 500: toast de error genérico + log
+[x] API client con fetch + PASETO:
+    [x] src/lib/api/client.ts
+        [x] baseURL desde env: PUBLIC_API_URL
+        [x] headers: Authorization: Bearer ${accessToken}
+        [x] Content-Type: application/json
+        [x] X-Request-Id generado por cliente
+    [x] Manejo de 401: intentar refresh → re-login si falla
+    [x] Manejo de 403: redirigir a /dashboard (sin permiso)
+    [x] Manejo de 500: toast de error genérico + log
 
-[ ] src/lib/stores/auth.svelte.ts — estado global con Svelte 5 Runes:
-    [ ] user = $state<User | null>(null)
-    [ ] accessToken = $state<string | null>(null)
-    [ ] refreshToken = $state<string | null>(null)  ← para rotación PASETO
-    [ ] isLoggedIn = $derived(user !== null && accessToken !== null)
-    [ ] isAdmin = $derived(user?.roles.includes("admin") ?? false)
-    [ ] hasPermission(permission: string) = $derived(...)
-    [ ] setAuth(user, accessToken, refreshToken)
-    [ ] clearAuth() → limpiar localStorage + redirect /login
-    [ ] Persistencia: localStorage para tokens (encriptado con subtle crypto)
+[x] src/lib/stores/auth.svelte.ts — estado global con Svelte 5 Runes:
+    [x] user = $state<User | null>(null)
+    [x] accessToken = $state<string | null>(null)
+    [x] refreshToken = $state<string | null>(null)  ← para rotación PASETO
+    [x] isLoggedIn = $derived(user !== null && accessToken !== null)
+    [x] isAdmin = $derived(user?.roles.includes("admin") ?? false)
+    [x] hasPermission(permission: string) = $derived(...)
+    [x] setAuth(user, accessToken, refreshToken)
+    [x] clearAuth() → limpiar localStorage + redirect /login
+    [x] Persistencia: localStorage para tokens (encriptado con subtle crypto)
 
-[ ] QueryClient configurado en src/routes/+layout.svelte:
-    [ ] QueryClientProvider con staleTime 5min
-    [ ] retry: 1 (no reintentar errores 4xx)
-    [ ] refetchOnWindowFocus: false (sedes tienen ventanas múltiples)
+[x] QueryClient configurado en src/routes/+layout.svelte:
+    [x] QueryClientProvider con staleTime 5min
+    [x] retry: 1 (no reintentar errores 4xx)
+    [x] refetchOnWindowFocus: false (sedes tienen ventanas múltiples)
 
-[ ] src/lib/validation/schemas.ts — ArkType:
-    [ ] LoginSchema, RegisterSchema
-    [ ] DeviceFormSchema (hostname, ip, mac, tipo, sede)
+[x] src/lib/validation/schemas.ts — ArkType:
+    [x] LoginSchema, RegisterSchema
+    [x] DeviceFormSchema (hostname, ip, mac, tipo, sede)
     [ ] AlertFilterSchema (status, severity, dateRange)
     [ ] SedeFormSchema
 

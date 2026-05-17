@@ -1,0 +1,8 @@
+{
+	"/(dashboard)": [],
+	"/(auth)": [],
+	"/": [],
+	"/(dashboard)/dashboard": [],
+	"/(auth)/login": [],
+	"/(auth)/register": []
+}

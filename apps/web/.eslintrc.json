@@ -1,0 +1,15 @@
+{
+	"extends": ["@sveltejs/eslint-config/recommended"],
+	"parserOptions": {
+		"sourceType": "module",
+		"ecmaVersion": 2022
+	},
+	"env": {
+		"browser": true,
+		"es2022": true,
+		"node": true
+	},
+	"rules": {
+		"no-console": ["warn", { "allow": ["warn", "error"] }]
+	}
+}
