@@ -312,14 +312,19 @@
 [x] Cache layer para device_status y metric_readings
 ```
 
-### V.3 — Healthchecks ⚠️
+### V.3 — Healthchecks ✅
 
+> **Completado:** 2026-05-17
 > **Referencia:** ADR 0014
 
 ```
-[ ] HealthChecker para cada componente
-[ ] /health/ready vs /health/live
-[ ] Ping a healthchecks.io cada 60s
+[x] HealthCheck trait con async_trait para dyn compatibility
+[x] HealthRegistry para gestionar múltiples health checks
+[x] DatabaseHealthCheck y HttpHealthCheck
+[x] /health/live - liveness probe simple
+[x] /health/ready - readiness con health checks de componentes
+[x] SystemHealth y HealthStatus con Serialize
+[x] Integración con AppState
 ```
 
 ### V.4 — Email (Resend) ⚠️
