@@ -25,9 +25,10 @@ build/
 *.sqlite
 *.sqlite3
 
-# Data
-/data/
-*.log
+# Data (solo runtime, no migrations ni seeds)
+# /data/             <-- Comentado para permitir migraciones en git
+/data/*.db
+/data/*.log
 
 # OS
 .DS_Store
