@@ -32,8 +32,4 @@ impl SedeRepository for PostgresSedeRepository {
     fn save(&self, sede: &Sede) -> Result<Sede, DomainError> {
         todo!("Implementar con sqlx - INSERT INTO sedes")
     }
-
-    fn delete(&self, id: Uuid) -> Result<(), DomainError> {
-        todo!("Implementar con sqlx - UPDATE sedes SET deleted_at = NOW() WHERE id = $1 (Soft Delete)")
-    }
 }
