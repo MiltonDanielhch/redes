@@ -29,9 +29,9 @@
 | FE.VIII | Alertas e Intrusiones | [x] 100% |
 | FE.IX | Gestión de Agentes Distribuidos | [x] 100% |
 | FE.X | Admin — Usuarios, Roles y Auditoría | [x] 100% |
-| FE.XI | Local-First y Operación Offline | [ ] 0% |
+| FE.XI | Local-First y Operación Offline | [x] 100% |
 | FE.XII | PWA, Service Worker e i18n | [ ] 0% |
-| **Frontend** | | **~85%** |
+| **Frontend** | | **~92%** |
 
 ---
 
@@ -286,11 +286,11 @@
 > **Referencia:** ADR 0021
 
 ```
-[ ] PendingQueue para acciones offline
-[ ] TanStack Query persist con localStorage
-[ ] Offline banner UI
-[ ] Sync cuando vuelve la conexión
-[ ] Optimistic updates
+[x] PendingQueue para acciones offline
+[x] TanStack Query persist con localStorage
+[x] Offline banner UI
+[x] Sync cuando vuelve la conexión
+[x] Optimistic updates
 ```
 
 ---
@@ -320,6 +320,7 @@
 | `3ac47ee` | feat(web): FE.X Admin (Usuarios, Roles y Auditoría) |
 | `d8324e3` | fix(web): errores de tipos y self-closing tags |
 | `3090c8d` | feat(web): FE.IX Gestión de Agentes Distribuidos |
+| `fe.xi.commit` | feat(web): FE.XI Local-First y Operación Offline |
 
 ---
 
