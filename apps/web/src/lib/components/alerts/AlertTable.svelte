@@ -7,13 +7,6 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import {
-		Select,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-		SelectValue
-	} from '$lib/components/ui/select';
 	import { cn } from '$lib/utils';
 	import type { AlertResponse } from '$lib/generated/api-types';
 
@@ -34,8 +27,8 @@
 	}: Props = $props();
 
 	let searchQuery = $state('');
-	let statusFilter = $state<string | null>(null);
-	let severityFilter = $state<string | null>(null);
+	let statusFilter = $state<string | undefined>(undefined);
+	let severityFilter = $state<string | undefined>(undefined);
 
 	let filteredAlerts = $derived(
 		alerts.filter((alert) => {
@@ -99,30 +92,26 @@
 			class="max-w-sm"
 		/>
 
-		<Select bind:value={statusFilter}>
-			<SelectTrigger class="w-40">
-				<SelectValue placeholder="Estado" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectItem value={null}>Todos los estados</SelectItem>
-				<SelectItem value="active">Activas</SelectItem>
-				<SelectItem value="acknowledged">Reconocidas</SelectItem>
-				<SelectItem value="resolved">Resueltas</SelectItem>
-			</SelectContent>
-		</Select>
+		<select
+			bind:value={statusFilter}
+			class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+		>
+			<option value={undefined}>Todos los estados</option>
+			<option value="active">Activas</option>
+			<option value="acknowledged">Reconocidas</option>
+			<option value="resolved">Resueltas</option>
+		</select>
 
-		<Select bind:value={severityFilter}>
-			<SelectTrigger class="w-40">
-				<SelectValue placeholder="Severidad" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectItem value={null}>Todas</SelectItem>
-				<SelectItem value="Critical">Crítica</SelectItem>
-				<SelectItem value="High">Alta</SelectItem>
-				<SelectItem value="Medium">Media</SelectItem>
-				<SelectItem value="Low">Baja</SelectItem>
-			</SelectContent>
-		</Select>
+		<select
+			bind:value={severityFilter}
+			class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+		>
+			<option value={undefined}>Todas</option>
+			<option value="Critical">Crítica</option>
+			<option value="High">Alta</option>
+			<option value="Medium">Media</option>
+			<option value="Low">Baja</option>
+		</select>
 	</div>
 
 	{#if loading}

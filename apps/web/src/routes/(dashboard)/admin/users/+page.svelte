@@ -49,7 +49,9 @@
 		showModal = true;
 	}
 
-	function openEditModal(user: User) {
+	function openEditModal(userId: string) {
+		const user = $usersQuery.data?.find((u) => u.id === userId);
+		if (!user) return;
 		editingUser = user;
 		email = user.email;
 		password = '';
@@ -123,8 +125,8 @@
 	<UserTable
 		users={$usersQuery.data}
 		loading={$usersQuery.isLoading}
-		onEdit={openEditModal}
-		onDelete={handleDelete}
+		onEditUser={openEditModal}
+		onDeleteUser={handleDelete}
 	/>
 </div>
 

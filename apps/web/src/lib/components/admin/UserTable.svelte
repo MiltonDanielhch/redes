@@ -2,28 +2,21 @@
 <!-- Descripción: Tabla de usuarios con acciones de crear/editar/eliminar -->
 <!-- ADRs relacionados: 0017 (Frontend SvelteKit), 0006 (RBAC) -->
 <script lang="ts">
-	import { MoreHorizontal, User, Shield, Trash2 } from 'lucide-svelte';
+	import { User as UserIcon, Shield, Trash2, Edit } from 'lucide-svelte';
 	import { Card, CardContent } from '$lib/components/ui/card';
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import {
-		DropdownMenu,
-		DropdownMenuContent,
-		DropdownMenuItem,
-		DropdownMenuSeparator,
-		DropdownMenuTrigger
-	} from '$lib/components/ui/dropdown-menu';
 	import type { User } from '$lib/generated/api-types';
 
 	interface Props {
 		users?: User[];
 		loading?: boolean;
-		onEdit?: (userId: string) => void;
-		onDelete?: (userId: string) => void;
+		onEditUser?: (userId: string) => void;
+		onDeleteUser?: (userId: string) => void;
 	}
 
-	let { users = [], loading = false, onEdit, onDelete }: Props = $props();
+	let { users = [], loading = false, onEditUser, onDeleteUser }: Props = $props();
 
 	let searchQuery = $state('');
 
@@ -69,7 +62,7 @@
 	{:else if filteredUsers.length === 0}
 		<Card>
 			<CardContent class="flex flex-col items-center justify-center py-12">
-				<User class="h-12 w-12 text-muted-foreground mb-4" />
+				<UserIcon class="h-12 w-12 text-muted-foreground mb-4" />
 				<p class="text-lg font-medium">No se encontraron usuarios</p>
 			</CardContent>
 		</Card>
@@ -83,7 +76,7 @@
 							<th class="p-3 text-left text-sm font-medium">Email</th>
 							<th class="p-3 text-left text-sm font-medium">Roles</th>
 							<th class="p-3 text-left text-sm font-medium">Fecha de creación</th>
-							<th class="p-3 text-left text-sm font-medium w-12">Acciones</th>
+							<th class="p-3 text-left text-sm font-medium w-24">Acciones</th>
 						</tr>
 					</thead>
 					<tbody>
@@ -92,7 +85,7 @@
 								<td class="p-3">
 									<div class="flex items-center gap-3">
 										<div class="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10">
-											<User class="h-4 w-4 text-primary" />
+											<UserIcon class="h-4 w-4 text-primary" />
 										</div>
 										<span class="font-medium">{user.nombre}</span>
 									</div>
@@ -114,27 +107,14 @@
 									{new Date(user.created_at).toLocaleDateString('es-BO')}
 								</td>
 								<td class="p-3">
-									<DropdownMenu>
-										<DropdownMenuTrigger>
-											<Button variant="ghost" class="h-8 w-8 p-0">
-												<MoreHorizontal class="h-4 w-4" />
-											</Button>
-										</DropdownMenuTrigger>
-										<DropdownMenuContent align="end">
-											<DropdownMenuItem onSelect={() => onEdit?.(user.id)}>
-												<User class="mr-2 h-4 w-4" />
-												Editar usuario
-											</DropdownMenuItem>
-											<DropdownMenuSeparator />
-											<DropdownMenuItem
-												class="text-red-500 focus:text-red-500"
-												onSelect={() => onDelete?.(user.id)}
-											>
-												<Trash2 class="mr-2 h-4 w-4" />
-												Eliminar
-											</DropdownMenuItem>
-										</DropdownMenuContent>
-									</DropdownMenu>
+									<div class="flex gap-2">
+										<Button variant="ghost" size="sm" onclick={() => onEditUser?.(user.id)}>
+											<Edit class="h-4 w-4" />
+										</Button>
+										<Button variant="ghost" size="sm" class="text-red-500 hover:text-red-500" onclick={() => onDeleteUser?.(user.id)}>
+											<Trash2 class="h-4 w-4" />
+										</Button>
+									</div>
 								</td>
 							</tr>
 						{/each}

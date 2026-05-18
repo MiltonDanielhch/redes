@@ -7,18 +7,11 @@
 	import { Badge } from '$lib/components/ui/badge';
 	import { Button } from '$lib/components/ui/button';
 	import { Input } from '$lib/components/ui/input';
-	import {
-		Select,
-		SelectContent,
-		SelectItem,
-		SelectTrigger,
-		SelectValue
-	} from '$lib/components/ui/select';
 	import { createQuery } from '@tanstack/svelte-query';
 	import type { AuditLogEntry } from '$lib/generated/api-types';
 
-	let userFilter = $state<string | null>(null);
-	let actionFilter = $state<string | null>(null);
+	let userFilter = $state('');
+	let actionFilter = $state('');
 	let searchQuery = $state('');
 
 	let auditQuery = createQuery({
@@ -98,19 +91,17 @@
 			/>
 		</div>
 
-		<Select bind:value={actionFilter}>
-			<SelectTrigger class="w-40">
-				<SelectValue placeholder="Acción" />
-			</SelectTrigger>
-			<SelectContent>
-				<SelectItem value={null}>Todas las acciones</SelectItem>
-				<SelectItem value="LOGIN">Login</SelectItem>
-				<SelectItem value="LOGOUT">Logout</SelectItem>
-				<SelectItem value="CREATE">Create</SelectItem>
-				<SelectItem value="UPDATE">Update</SelectItem>
-				<SelectItem value="DELETE">Delete</SelectItem>
-			</SelectContent>
-		</Select>
+		<select
+			bind:value={actionFilter}
+			class="flex h-10 rounded-md border border-input bg-background px-3 py-2 text-sm"
+		>
+			<option value="">Todas las acciones</option>
+			<option value="LOGIN">Login</option>
+			<option value="LOGOUT">Logout</option>
+			<option value="CREATE">Create</option>
+			<option value="UPDATE">Update</option>
+			<option value="DELETE">Delete</option>
+		</select>
 	</div>
 
 	{#if $auditQuery.isLoading}
