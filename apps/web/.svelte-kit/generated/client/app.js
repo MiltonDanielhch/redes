@@ -17,7 +17,8 @@ export const nodes = [
 	() => import('./nodes/13'),
 	() => import('./nodes/14'),
 	() => import('./nodes/15'),
-	() => import('./nodes/16')
+	() => import('./nodes/16'),
+	() => import('./nodes/17')
 ];
 
 export const server_loads = [];
@@ -26,16 +27,17 @@ export const dictionary = {
 		"/": [4],
 		"/(dashboard)/admin/audit": [7,[3]],
 		"/(dashboard)/admin/users": [8,[3]],
-		"/(dashboard)/alerts": [9,[3]],
-		"/(dashboard)/dashboard": [10,[3]],
-		"/(dashboard)/devices": [11,[3]],
-		"/(dashboard)/devices/[id]": [12,[3]],
-		"/(dashboard)/intrusions": [13,[3]],
+		"/(dashboard)/agents": [9,[3]],
+		"/(dashboard)/alerts": [10,[3]],
+		"/(dashboard)/dashboard": [11,[3]],
+		"/(dashboard)/devices": [12,[3]],
+		"/(dashboard)/devices/[id]": [13,[3]],
+		"/(dashboard)/intrusions": [14,[3]],
 		"/(auth)/login": [5,[2]],
-		"/(dashboard)/metrics": [14,[3]],
+		"/(dashboard)/metrics": [15,[3]],
 		"/(auth)/register": [6,[2]],
-		"/(dashboard)/sedes": [15,[3]],
-		"/(dashboard)/topology": [16,[3]]
+		"/(dashboard)/sedes": [16,[3]],
+		"/(dashboard)/topology": [17,[3]]
 	};
 
 export const hooks = {

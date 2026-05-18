@@ -29,7 +29,7 @@ declare module "$app/types" {
 	type MatcherParam<M> = M extends (param : string) => param is (infer U extends string) ? U : string;
 
 	export interface AppTypes {
-		RouteId(): "/(dashboard)" | "/(auth)" | "/" | "/(dashboard)/admin" | "/(dashboard)/admin/audit" | "/(dashboard)/admin/users" | "/(dashboard)/alerts" | "/(dashboard)/dashboard" | "/(dashboard)/devices" | "/(dashboard)/devices/[id]" | "/(dashboard)/intrusions" | "/(auth)/login" | "/(dashboard)/metrics" | "/(auth)/register" | "/(dashboard)/sedes" | "/(dashboard)/topology";
+		RouteId(): "/(dashboard)" | "/(auth)" | "/" | "/(dashboard)/admin" | "/(dashboard)/admin/audit" | "/(dashboard)/admin/users" | "/(dashboard)/agents" | "/(dashboard)/alerts" | "/(dashboard)/dashboard" | "/(dashboard)/devices" | "/(dashboard)/devices/[id]" | "/(dashboard)/intrusions" | "/(auth)/login" | "/(dashboard)/metrics" | "/(auth)/register" | "/(dashboard)/sedes" | "/(dashboard)/topology";
 		RouteParams(): {
 			"/(dashboard)/devices/[id]": { id: string }
 		};
@@ -40,6 +40,7 @@ declare module "$app/types" {
 			"/(dashboard)/admin": Record<string, never>;
 			"/(dashboard)/admin/audit": Record<string, never>;
 			"/(dashboard)/admin/users": Record<string, never>;
+			"/(dashboard)/agents": Record<string, never>;
 			"/(dashboard)/alerts": Record<string, never>;
 			"/(dashboard)/dashboard": Record<string, never>;
 			"/(dashboard)/devices": { id?: string };
@@ -51,7 +52,7 @@ declare module "$app/types" {
 			"/(dashboard)/sedes": Record<string, never>;
 			"/(dashboard)/topology": Record<string, never>
 		};
-		Pathname(): "/" | "/admin/audit" | "/admin/users" | "/alerts" | "/dashboard" | "/devices" | `/devices/${string}` & {} | "/intrusions" | "/login" | "/metrics" | "/register" | "/sedes" | "/topology";
+		Pathname(): "/" | "/admin/audit" | "/admin/users" | "/agents" | "/alerts" | "/dashboard" | "/devices" | `/devices/${string}` & {} | "/intrusions" | "/login" | "/metrics" | "/register" | "/sedes" | "/topology";
 		ResolvedPathname(): `${"" | `/${string}`}${ReturnType<AppTypes['Pathname']>}`;
 		Asset(): "/favicon.svg" | string & {};
 	}

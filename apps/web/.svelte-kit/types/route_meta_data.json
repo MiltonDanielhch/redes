@@ -12,6 +12,9 @@
 	"/(dashboard)/admin/users": [
 		"src/routes/(dashboard)/+layout.ts"
 	],
+	"/(dashboard)/agents": [
+		"src/routes/(dashboard)/+layout.ts"
+	],
 	"/(dashboard)/alerts": [
 		"src/routes/(dashboard)/+layout.ts"
 	],

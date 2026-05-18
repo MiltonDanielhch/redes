@@ -27,7 +27,7 @@
 | FE.VI | Métricas, Gráficos y SSE | [x] |
 | FE.VII | Topología de Red | [x] |
 | FE.VIII | Alertas e Intrusiones | [x] |
-| FE.IX | Gestión de Agentes Distribuidos | [ ] |
+| FE.IX | Gestión de Agentes Distribuidos | [x] |
 | FE.X | Admin — Usuarios, Roles y Auditoría | [x] |
 | FE.XI | Local-First y Operación Offline | [ ] |
 | FE.XII | PWA, Service Worker e i18n | [ ] |
