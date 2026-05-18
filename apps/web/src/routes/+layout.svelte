@@ -4,6 +4,7 @@
 <script lang="ts">
 	import { QueryClient, QueryClientProvider } from '@tanstack/svelte-query';
 	import { Toaster } from 'svelte-sonner';
+	import OfflineBanner from '$lib/components/network/OfflineBanner.svelte';
 	import '../app.css';
 
 	const queryClient = new QueryClient({
@@ -18,6 +19,7 @@
 </script>
 
 <QueryClientProvider client={queryClient}>
+	<OfflineBanner />
 	<Toaster position="top-right" />
 	<slot />
 </QueryClientProvider>
